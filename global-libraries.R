@@ -12,6 +12,6 @@ pkgTest <- function(x)
 	return("OK")
 }
 
-global.libraries <- c("dplyr","devtools","rprojroot","googlesheets","rcrossref")
+global.libraries <- c("dplyr","devtools","rprojroot","googlesheets","rcrossref","tidyr")
 
 results <- sapply(as.list(global.libraries), pkgTest)
