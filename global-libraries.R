@@ -12,6 +12,7 @@ pkgTest <- function(x)
 	return("OK")
 }
 
-global.libraries <- c("dplyr","devtools","rprojroot","googlesheets","rcrossref","tidyr")
-
+global.libraries <- c("dplyr","devtools","rprojroot","googlesheets","tidyr")
+remotes::install_github("ropensci/rcrossref")
+library(rcrossref)
 results <- sapply(as.list(global.libraries), pkgTest)

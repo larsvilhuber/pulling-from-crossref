@@ -132,14 +132,17 @@ knitr::kable(new.df %>% group_by(container.title) %>% summarise(records = n()))
 
 ```{r write_addtl, include=FALSE}
 # we remove those we already have
-addtl.df <- anti_join(new.df,uniques,by=c("doi"))
-write.csv(addtl.df, file = addtl.file)
+#addtl.df <- anti_join(new.df,uniques,by=c("doi"))
+## commented line above because uniques is not defined. no full.list exists
+# flaten the list of authors 
+df <- as.data.frame(apply(new.df,2,as.character))
+write.csv(df, file = addtl.file)
 
 ```
 Of these, `r nrow(addtl.df)` records for `r nrow(addtl.df %>% select(container.title) %>% distinct())` journals were new:
 
 ```{r stats2, echo=FALSE}
-addtl.stats <- addtl.df %>% 
+addtl.stats <- df %>% 
 	group_by(container.title) %>% 
 	summarise(records = n(), lastdate = max(published.print)) %>%
 	rename(journal = container.title )
