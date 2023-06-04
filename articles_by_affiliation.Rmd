@@ -1,7 +1,7 @@
 ---
-title: "Obtaining lists of articles for AEA journals"
+title: "Obtaining lists of articles for contributors from a specific Org"
 author: "Lars Vilhuber"
-date: "3/1/2019"
+date: "`r Sys.Date()`"
 output: 
   html_document: 
     keep_md: yes
@@ -11,26 +11,24 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Overview
+
 ## Sources
-We have two sources:
 
-- prior list of articles
-- CrossRef, for new articles
-
-We load relevant libraries here.
+- CrossRef
 
 ```{r config_libs,include=FALSE,message=FALSE}
 source(file.path(rprojroot::find_root(rprojroot::has_file("pathconfig.R")),"pathconfig.R"),echo=TRUE)
 source(file.path(basepath,"global-libraries.R"),echo=TRUE)
 source(file.path(basepath,"config.R"),echo=TRUE)
 ```
+
 ## Instructions
 This file, when executed, will
 
-- download the list of previous articles
-- download DOI for all publications for a number of journals from CrossRef
-- identify the ones that are new
-- create a CSV of new files
+- download a list of articles for top journals from CrossRef
+- Filter those articles by affiliation of the authors
+- Save the output as CSV
 
 The program will check for prior files, and will NOT download new data if those files are present. Thus, to get a fresh run, 
 
@@ -52,9 +50,9 @@ Temporary data is in
 
 and can (should) be deleted after completion.
 
-## Current list of DOI
+## Current list of articles
 
-We first obtain the current list of DOI. This is not failsafe - it assumes there *is* such a list.
+We first obtain the current list of articles. This is not failsafe - it assumes there *is* such a list.
 
 
 ```{r read_list}
@@ -70,51 +68,60 @@ if (file.exists(full.file.Rds)) {
 
 ```
 
-- We read `r nrow(repllist)` records on `r Sys.Date()`.
-- There are **`r nrow(uniques)`** unique DOI records. 
 
 ```{r issn}
 # Each journal has a ISSN
 if (!file.exists(issns.file)) {
-issns <- data.frame(matrix(ncol=3,nrow=5))
-names(issns) <- c("journal","issn","lastdate")
-tmp.date <- c("2000-01")
-issns[1,] <- c("American Economic Journal: Applied Economics","1945-7790",tmp.date)
-issns[2,] <- c("American Economic Journal: Economic Policy","1945-774X",tmp.date)
-issns[3,] <- c("American Economic Journal: Macroeconomics", "1945-7715",tmp.date)
-issns[4,] <- c("American Economic Journal: Microeconomics", "1945-7685",tmp.date)
-issns[5,] <- c("The American Economic Review","1944-7981",tmp.date)
-issns[6,] <- c("The American Economic Review","0002-8282",tmp.date)  # print ISSN is needed!
+issns <- data.frame(matrix(ncol=2,nrow=10))
+names(issns) <- c("journal","issn")
+tmp.date <- c("2000-01-01")
+issns[1,] <- c("American Economic Journal: Applied Economics","1945-7790")
+issns[2,] <- c("American Economic Journal: Economic Policy","1945-774X")
+issns[3,] <- c("American Economic Journal: Macroeconomics", "1945-7715")
+issns[4,] <- c("American Economic Journal: Microeconomics", "1945-7685")
+issns[5,] <- c("The American Economic Review","1944-7981")
+issns[6,] <- c("The American Economic Review","0002-8282")  # print ISSN is needed!
+issns[7,] <- c("The Quarterly Journal of Economics","0033-5533") # use the print ISSN (OUP). Online ISSN: 1531-4650
+issns[8,] <- c("The Review of Economic Studies","0034-6527") # use the print ISSN (OUP). Online ISSN: 1467-937X
+issns[9,] <- c("Journal of Political Economy","0022-3808") # online: E-ISSN: 1537-534X
+issns[10,] <- c("The Economic Journal Oxford","0013-0133") # Online ISSN 1468-0297 
 
+
+issns$lastdate <- tmp.date
 saveRDS(issns, file= issns.file)
 }
 
-issns <- readRDS(file = issns.file)
 
 ```
 
 Now read DOI for all later dates.
+
 ```{r read_AEA}
 # Run this only once per session
-#if ( file.exists(issns.file) & !file.exists(new.file.Rds)) {
+# The column "author" contains author-affiliations as well.
 if ( file.exists(issns.file) ) {
-	new.df <- NA
-	for ( x in 1:4 ) {
+  issns <- readRDS(file = issns.file)
+	crossref.df <- NA
+	for ( x in 1:nrow(issns) ) {
 		new <- cr_journals(issn=issns[x,"issn"], works=TRUE,
 				   filter=c(from_pub_date=issns[x,"lastdate"]),
 				   select=c("DOI","title","published-print","volume","issue","container-title","author"),
 				   .progress="text",
 				   cursor = "*")
 		if ( x == 1 ) {
-      		new.df <- as.data.frame(new$data)
-      		new.df$issn = issns[x,"issn"]
+      		#crossref.df <- as.data.frame(new$data)
+		      crossref.df <- new %>% purrr::pluck("data")
+      		crossref.df$issn = issns[x,"issn"]
     	} else {
-    	    tmp.df <- as.data.frame(new$data)
+    	    #tmp.df <- as.data.frame(new$data)
+    	    tmp.df <- new %>% purrr::pluck("data")
     	    tmp.df$issn = issns[x,"issn"]
-      		new.df <- bind_rows(new.df,tmp.df)
+      		crossref.df <- bind_rows(crossref.df,tmp.df)
       		rm(tmp.df)
     	}
 	}
+	# extract the author information into columns
+	crossref.df %>% unnest(author) -> new.df
 	saveRDS(new.df, file= new.file.Rds)
 	rm(new)
 }
@@ -123,7 +130,7 @@ if ( file.exists(issns.file) ) {
 new.df <- readRDS(file= new.file.Rds)
 ```
 
-We read `r nrow(new.df)` records for `r nrow(new.df %>% select(container.title) %>% distinct())` journals:
+We read **`r nrow(new.df %>% select(doi) %>% distinct())`** article records for **`r nrow(new.df %>% select(container.title) %>% distinct())`** journals, with **`r nrow(new.df)`** article-author observations:
 
 ```{r stats1, echo=FALSE}
 knitr::kable(new.df %>% group_by(container.title) %>% summarise(records = n()))
@@ -134,7 +141,7 @@ knitr::kable(new.df %>% group_by(container.title) %>% summarise(records = n()))
 # we remove those we already have
 #addtl.df <- anti_join(new.df,uniques,by=c("doi"))
 ## commented line above because uniques is not defined. no full.list exists
-# flaten the list of authors 
+# flatten the list of authors 
 df <- as.data.frame(apply(new.df,2,as.character))
 write.csv(df, file = addtl.file)
 
@@ -159,5 +166,28 @@ issns <- addtl.stats %>% select(journal,lastdate) %>%
 saveRDS(issns, file= issns.file)
 ```
 
+## Writing out final files
+
+We finalize by creating a combined file with all records, and a corresponding CSV file.
+
+```{r output}
+# Append new.df and full.file
 
 
+if (file.exists(full.file.Rds)) {
+	print(paste0("File ",full.file.Rds," exists."))
+  full.file <- bind_rows(readRDS(full.file.Rds),new.df)
+} else	{
+  full.file <- new.df 
+}
+
+saveRDS(full.file,file=full.file.Rds)
+write.csv2(full.file,file=full.file.csv)
+
+```
+
+## System info
+
+```{r sysinfo}
+Sys.info()
+```
