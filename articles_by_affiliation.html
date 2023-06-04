@@ -419,7 +419,7 @@ it assumes there <em>is</em> such a list.</p>
 <pre class="r"><code>if (file.exists(full.file.Rds)) {
     print(paste0(&quot;File &quot;,full.file.Rds,&quot; exists.&quot;))
   full.file &lt;- readRDS(full.file.Rds)
-  uniques &lt;- full.file %&gt;% select(DOI) %&gt;% distinct() %&gt;% rename(doi = DOI)
+  uniques &lt;- full.file %&gt;% select(doi) %&gt;% distinct() 
 } else  {
   print(paste0(&quot;File &quot;,full.file.Rds,&quot; is absent.&quot;))
 }</code></pre>
@@ -572,7 +572,7 @@ if (file.exists(full.file.Rds)) {
 }
 
 saveRDS(full.file,file=full.file.Rds)
-write.csv2(full.file,file=full.file.csv)</code></pre>
+write.csv(full.file,file=full.file.csv,row.names = FALSE)</code></pre>
 <p>Now pull out the selected affiliation (“World Bank”):</p>
 <pre class="r"><code>full.file &lt;- readRDS(full.file.Rds)
 full.file %&gt;% filter(str_detect(affiliations,affiliation.target)) -&gt; target
@@ -580,14 +580,15 @@ full.file %&gt;% filter(str_detect(affiliations,affiliation.target)) -&gt; targe
 # Save the target file
 
 saveRDS(target,target.file.Rds)
-write.csv2(target,target.file.csv)
+write.csv(target,target.file.csv,row.names = FALSE)
 
 # subset to unique articles
 
 target %&gt;% select(container.title,published.print,doi,title) %&gt;%
   distinct() %&gt;%
   mutate(url=paste0(&quot;https://doi.org/&quot;,doi)) -&gt; target.articles
-write.csv2(target.articles,target.articles.csv)</code></pre>
+write.csv(target.articles,target.articles.csv,row.names = FALSE)</code></pre>
+<p>Here are the articles we found:</p>
 </div>
 <div id="system-info" class="section level2">
 <h2>System info</h2>

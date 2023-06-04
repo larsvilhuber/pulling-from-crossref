@@ -54,7 +54,7 @@ We first obtain the current list of articles. This is not failsafe - it assumes 
 if (file.exists(full.file.Rds)) {
 	print(paste0("File ",full.file.Rds," exists."))
   full.file <- readRDS(full.file.Rds)
-  uniques <- full.file %>% select(DOI) %>% distinct() %>% rename(doi = DOI)
+  uniques <- full.file %>% select(doi) %>% distinct() 
 } else	{
   print(paste0("File ",full.file.Rds," is absent."))
 }
@@ -185,7 +185,7 @@ if (file.exists(full.file.Rds)) {
 }
 
 saveRDS(full.file,file=full.file.Rds)
-write.csv2(full.file,file=full.file.csv)
+write.csv(full.file,file=full.file.csv,row.names = FALSE)
 ```
 
 Now pull out the selected affiliation ("World Bank"):
@@ -198,15 +198,19 @@ full.file %>% filter(str_detect(affiliations,affiliation.target)) -> target
 # Save the target file
 
 saveRDS(target,target.file.Rds)
-write.csv2(target,target.file.csv)
+write.csv(target,target.file.csv,row.names = FALSE)
 
 # subset to unique articles
 
 target %>% select(container.title,published.print,doi,title) %>%
   distinct() %>%
   mutate(url=paste0("https://doi.org/",doi)) -> target.articles
-write.csv2(target.articles,target.articles.csv)
+write.csv(target.articles,target.articles.csv,row.names = FALSE)
 ```
+
+Here are the articles we found:
+
+
 
 ## System info
 
