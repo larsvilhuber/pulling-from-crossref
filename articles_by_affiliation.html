@@ -470,7 +470,12 @@ if ( file.exists(issns.file) ) {
         }
     }
     # extract the author information into columns
-    crossref.df %&gt;% unnest(author) -&gt; new.df
+    crossref.df %&gt;% unnest(author) -&gt; raw.df
+    
+    # Cleaning up. OUP breaks out multiple affiliations. We concatenate them back together again
+    raw.df %&gt;% 
+      unite(affiliations,starts_with(&quot;affiliation&quot;),sep=&quot;;&quot;,remove=TRUE,na.rm=TRUE) %&gt;%
+      mutate(affiliations = str_remove(string = affiliations,pattern = fixed(&quot; (email: )&quot;))) -&gt; new.df
     saveRDS(new.df, file= new.file.Rds)
     rm(new)
 }
@@ -478,7 +483,7 @@ if ( file.exists(issns.file) ) {
 # clean read-back
 new.df &lt;- readRDS(file= new.file.Rds)</code></pre>
 <p>We read <strong>13096</strong> article records for
-<strong>13</strong> journals, with <strong>28876</strong> article-author
+<strong>13</strong> journals, with <strong>28887</strong> article-author
 observations:</p>
 <table>
 <thead>
@@ -506,7 +511,7 @@ observations:</p>
 </tr>
 <tr class="odd">
 <td align="left">American Economic Review</td>
-<td align="right">9845</td>
+<td align="right">9856</td>
 </tr>
 <tr class="even">
 <td align="left">Journal of Political Economy</td>
@@ -568,6 +573,21 @@ if (file.exists(full.file.Rds)) {
 
 saveRDS(full.file,file=full.file.Rds)
 write.csv2(full.file,file=full.file.csv)</code></pre>
+<p>Now pull out the selected affiliation (“World Bank”):</p>
+<pre class="r"><code>full.file &lt;- readRDS(full.file.Rds)
+full.file %&gt;% filter(str_detect(affiliations,affiliation.target)) -&gt; target
+
+# Save the target file
+
+saveRDS(target,target.file.Rds)
+write.csv2(target,target.file.csv)
+
+# subset to unique articles
+
+target %&gt;% select(container.title,published.print,doi,title) %&gt;%
+  distinct() %&gt;%
+  mutate(url=paste0(&quot;https://doi.org/&quot;,doi)) -&gt; target.articles
+write.csv2(target.articles,target.articles.csv)</code></pre>
 </div>
 <div id="system-info" class="section level2">
 <h2>System info</h2>

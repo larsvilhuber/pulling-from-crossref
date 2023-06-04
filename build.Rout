@@ -1,0 +1,132 @@
+
+R version 4.2.0 (2022-04-22) -- "Vigorous Calisthenics"
+Copyright (C) 2022 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+> # for testing on Mac
+> sysinf <- Sys.info()
+> 
+> if ( sysinf['sysname'] == 'Darwin' ) {
++    Sys.setenv(RSTUDIO_PANDOC="/Applications/RStudio.app/Contents/MacOS/pandoc")
++ }
+> 
+> rmarkdown::render('articles_by_affiliation.Rmd', output_format = 'html_document')
+
+
+processing file: articles_by_affiliation.Rmd
+  |                                                                              |                                                                      |   0%  |                                                                              |...                                                                   |   5%
+   inline R code fragments
+
+  |                                                                              |......                                                                |   9%
+label: setup (with options) 
+List of 1
+ $ include: logi FALSE
+
+  |                                                                              |..........                                                            |  14%
+  ordinary text without R code
+
+  |                                                                              |.............                                                         |  18%
+label: config_libs (with options) 
+List of 2
+ $ include: logi FALSE
+ $ message: logi FALSE
+
+Skipping install of 'rcrossref' from a github remote, the SHA1 (bf3fcfe0) has not changed since last install.
+  Use `force = TRUE` to force installation
+Loading required package: dplyr
+
+Attaching package: 'dplyr'
+
+The following objects are masked from 'package:stats':
+
+    filter, lag
+
+The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union
+
+Loading required package: devtools
+Loading required package: usethis
+Loading required package: rprojroot
+Loading required package: tidyr
+Loading required package: purrr
+Loading required package: stringr
+  |                                                                              |................                                                      |  23%
+   inline R code fragments
+
+  |                                                                              |...................                                                   |  27%
+label: read_list
+  |                                                                              |......................                                                |  32%
+  ordinary text without R code
+
+  |                                                                              |.........................                                             |  36%
+label: issn
+  |                                                                              |.............................                                         |  41%
+  ordinary text without R code
+
+  |                                                                              |................................                                      |  45%
+label: read_AEA
+  |                                                                              |...................................                                   |  50%
+   inline R code fragments
+
+  |                                                                              |......................................                                |  55%
+label: stats1 (with options) 
+List of 1
+ $ echo: logi FALSE
+
+  |                                                                              |.........................................                             |  59%
+  ordinary text without R code
+
+  |                                                                              |.............................................                         |  64%
+label: write_addtl (with options) 
+List of 1
+ $ include: logi FALSE
+
+  |                                                                              |................................................                      |  68%
+   inline R code fragments
+
+  |                                                                              |...................................................                   |  73%
+label: update (with options) 
+List of 1
+ $ eval: logi FALSE
+
+  |                                                                              |......................................................                |  77%
+  ordinary text without R code
+
+  |                                                                              |.........................................................             |  82%
+label: output
+  |                                                                              |............................................................          |  86%
+   inline R code fragments
+
+  |                                                                              |................................................................      |  91%
+label: target
+  |                                                                              |...................................................................   |  95%
+  ordinary text without R code
+
+  |                                                                              |......................................................................| 100%
+label: sysinfo
+
+output file: articles_by_affiliation.knit.md
+
+/usr/lib/rstudio-server/bin/quarto/bin/pandoc +RTS -K512m -RTS articles_by_affiliation.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output articles_by_affiliation.html --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmarkdown/lua/latex-div.lua --self-contained --variable bs3=TRUE --standalone --section-divs --template /usr/local/lib/R/site-library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=bootstrap --mathjax --variable 'mathjax-url=https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-in-header /tmp/RtmphM6pdt/rmarkdown-str3e365af8204.html 
+
+Output created: articles_by_affiliation.html
+> 
+> proc.time()
+   user  system elapsed 
+ 66.896   1.299 388.894 

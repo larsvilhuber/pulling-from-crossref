@@ -121,7 +121,12 @@ if ( file.exists(issns.file) ) {
     	}
 	}
 	# extract the author information into columns
-	crossref.df %>% unnest(author) -> new.df
+	crossref.df %>% unnest(author) -> raw.df
+	
+	# Cleaning up. OUP breaks out multiple affiliations. We concatenate them back together again
+	raw.df %>% 
+	  unite(affiliations,starts_with("affiliation"),sep=";",remove=TRUE,na.rm=TRUE) %>%
+	  mutate(affiliations = str_remove(string = affiliations,pattern = fixed(" (email: )"))) -> new.df
 	saveRDS(new.df, file= new.file.Rds)
 	rm(new)
 }
@@ -130,7 +135,7 @@ if ( file.exists(issns.file) ) {
 new.df <- readRDS(file= new.file.Rds)
 ```
 
-We read **13096** article records for **13** journals, with **28876** article-author observations:
+We read **13096** article records for **13** journals, with **28887** article-author observations:
 
 
 |container.title                              | records|
@@ -139,7 +144,7 @@ We read **13096** article records for **13** journals, with **28876** article-au
 |American Economic Journal: Economic Policy   |    1526|
 |American Economic Journal: Macroeconomics    |    1163|
 |American Economic Journal: Microeconomics    |    1311|
-|American Economic Review                     |    9845|
+|American Economic Review                     |    9856|
 |Journal of Political Economy                 |    2740|
 |Quarterly Journal of Economics               |     431|
 |Review of Economic Studies                   |     920|
@@ -181,6 +186,26 @@ if (file.exists(full.file.Rds)) {
 
 saveRDS(full.file,file=full.file.Rds)
 write.csv2(full.file,file=full.file.csv)
+```
+
+Now pull out the selected affiliation ("World Bank"):
+
+
+```r
+full.file <- readRDS(full.file.Rds)
+full.file %>% filter(str_detect(affiliations,affiliation.target)) -> target
+
+# Save the target file
+
+saveRDS(target,target.file.Rds)
+write.csv2(target,target.file.csv)
+
+# subset to unique articles
+
+target %>% select(container.title,published.print,doi,title) %>%
+  distinct() %>%
+  mutate(url=paste0("https://doi.org/",doi)) -> target.articles
+write.csv2(target.articles,target.articles.csv)
 ```
 
 ## System info
