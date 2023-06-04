@@ -146,20 +146,11 @@ df <- as.data.frame(apply(new.df,2,as.character))
 write.csv(df, file = addtl.file)
 
 ```
-Of these, `r nrow(addtl.df)` records for `r nrow(addtl.df %>% select(container.title) %>% distinct())` journals were new:
-
-```{r stats2, echo=FALSE}
-addtl.stats <- df %>% 
-	group_by(container.title) %>% 
-	summarise(records = n(), lastdate = max(published.print)) %>%
-	rename(journal = container.title )
-knitr::kable(addtl.stats)
-```
 
 The new records can be found [here](`r addtl.file`). We now update the file we use to track the updates, ` `r issns.file` `. If you need to run the process anew, simply revert the file ` `r issns.file` ` and run this document again.
 
-```{r update}
-issns <- addtl.stats %>% select(journal,lastdate) %>% 
+```{r update, eval=FALSE}
+issns <- new.df %>% select(journal,lastdate) %>% 
 	right_join(issns,by=c("journal")) %>%
 	mutate( lastdate = coalesce(lastdate.x,lastdate.y)) %>%
 	select(-lastdate.x, -lastdate.y)
