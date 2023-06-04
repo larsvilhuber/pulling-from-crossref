@@ -17,4 +17,12 @@ addtl.file <- file.path(dataloc,paste0("addtl_doi.csv"))
 # you may need to change this
 Sys.setenv(crossref_email = "ldi@cornell.edu")
 
+##To pass your email address to Crossref, simply store it as an environment variable in .Renviron like this:
 
+##Open file: file.edit("~/.Renviron")
+
+##Add email address to be shared with Crossref crossref_email= "name@example.com"
+
+#Save the file and restart your R session
+
+##To stop sharing your email when using rcrossref simply delete it from your .Renviron file
