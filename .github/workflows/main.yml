@@ -18,7 +18,7 @@ jobs:
       - name: Run docker for R 
         uses: docker://larsvilhuber/pulling-from-crossref:2023-06-04
         with:
-          args: "/github/workspace/_build.sh publish"
+          args: "/github/workspace/_build.sh "
           
           
       # send it to test-pdf
@@ -31,5 +31,5 @@ jobs:
            publish_dir: _book
            user_name: 'Github Action Bot'
            user_email: 'lars.vilhuber@cornell.edu'
-           publish_branch: gh-pages 
+           publish_branch: . 
            keep_files: false
