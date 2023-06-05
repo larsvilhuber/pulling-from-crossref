@@ -17,7 +17,7 @@ Sys.setenv(crossref_email = "ldi@cornell.edu")
 
 # Entity we are searching for:
 
-affiliation.target = "World Bank"
+affiliation.target = c("World Bank","IMF","International Monetary Fund")
 target.file.Rds = file.path(dataloc,"targets.Rds")
 target.file.csv = file.path(dataloc,"targets.csv")
 target.articles.csv = file.path(dataloc,"target-articles.csv")
