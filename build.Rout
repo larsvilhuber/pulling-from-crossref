@@ -17,8 +17,6 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
 
-[Previously saved workspace restored]
-
 > 
 > # for testing on Mac
 > sysinf <- Sys.info()
@@ -31,18 +29,18 @@ Type 'q()' to quit R.
 
 
 processing file: articles_by_affiliation.Rmd
-  |                                                                              |                                                                      |   0%  |                                                                              |...                                                                   |   4%
+  |                                                                              |                                                                      |   0%  |                                                                              |..                                                                    |   3%
    inline R code fragments
 
-  |                                                                              |.....                                                                 |   8%
+  |                                                                              |.....                                                                 |   7%
 label: setup (with options) 
 List of 1
  $ include: logi FALSE
 
-  |                                                                              |........                                                              |  12%
+  |                                                                              |.......                                                               |  10%
   ordinary text without R code
 
-  |                                                                              |...........                                                           |  15%
+  |                                                                              |.........                                                             |  13%
 label: config_libs (with options) 
 List of 2
  $ include: logi FALSE
@@ -68,72 +66,84 @@ Loading required package: rprojroot
 Loading required package: tidyr
 Loading required package: purrr
 Loading required package: stringr
-  |                                                                              |.............                                                         |  19%
+Loading required package: readr
+Loading required package: markdown
+  |                                                                              |............                                                          |  17%
    inline R code fragments
 
-  |                                                                              |................                                                      |  23%
+  |                                                                              |..............                                                        |  20%
 label: read_list
+  |                                                                              |................                                                      |  23%
+  ordinary text without R code
+
   |                                                                              |...................                                                   |  27%
-  ordinary text without R code
-
-  |                                                                              |......................                                                |  31%
 label: issn
-  |                                                                              |........................                                              |  35%
+  |                                                                              |.....................                                                 |  30%
   ordinary text without R code
 
-  |                                                                              |...........................                                           |  38%
+  |                                                                              |.......................                                               |  33%
 label: read_AEA
-  |                                                                              |..............................                                        |  42%
+  |                                                                              |..........................                                            |  37%
    inline R code fragments
 
-  |                                                                              |................................                                      |  46%
+  |                                                                              |............................                                          |  40%
 label: stats1 (with options) 
 List of 1
  $ echo: logi FALSE
 
-  |                                                                              |...................................                                   |  50%
+  |                                                                              |..............................                                        |  43%
   ordinary text without R code
 
-  |                                                                              |......................................                                |  54%
+  |                                                                              |.................................                                     |  47%
 label: write_addtl (with options) 
 List of 1
  $ include: logi FALSE
 
-  |                                                                              |........................................                              |  58%
+  |                                                                              |...................................                                   |  50%
    inline R code fragments
 
-  |                                                                              |...........................................                           |  62%
+  |                                                                              |.....................................                                 |  53%
 label: update (with options) 
 List of 1
  $ eval: logi FALSE
 
-  |                                                                              |..............................................                        |  65%
+  |                                                                              |........................................                              |  57%
   ordinary text without R code
 
-  |                                                                              |................................................                      |  69%
+  |                                                                              |..........................................                            |  60%
 label: output
-  |                                                                              |...................................................                   |  73%
+  |                                                                              |............................................                          |  63%
    inline R code fragments
 
-  |                                                                              |......................................................                |  77%
+  |                                                                              |...............................................                       |  67%
 label: target
-  |                                                                              |.........................................................             |  81%
+  |                                                                              |.................................................                     |  70%
+  ordinary text without R code
+
+  |                                                                              |...................................................                   |  73%
+label: construct_authors
+  |                                                                              |......................................................                |  77%
+  ordinary text without R code
+
+  |                                                                              |........................................................              |  80%
+label: save_target
+  |                                                                              |..........................................................            |  83%
    inline R code fragments
 
-  |                                                                              |...........................................................           |  85%
+  |                                                                              |.............................................................         |  87%
 label: group_articles (with options) 
 List of 1
- $ include: logi FALSE
+ $ echo: logi FALSE
 
-  |                                                                              |..............................................................        |  88%
+  |                                                                              |...............................................................       |  90%
   ordinary text without R code
 
-  |                                                                              |.................................................................     |  92%
+  |                                                                              |.................................................................     |  93%
 label: show_articles (with options) 
 List of 1
- $ include: logi FALSE
+ $ echo: logi FALSE
 
-  |                                                                              |...................................................................   |  96%
+  |                                                                              |....................................................................  |  97%
   ordinary text without R code
 
   |                                                                              |......................................................................| 100%
@@ -141,10 +151,10 @@ label: sysinfo
 
 output file: articles_by_affiliation.knit.md
 
-/usr/lib/rstudio-server/bin/quarto/bin/pandoc +RTS -K512m -RTS articles_by_affiliation.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output articles_by_affiliation.html --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmarkdown/lua/latex-div.lua --self-contained --variable bs3=TRUE --standalone --section-divs --template /usr/local/lib/R/site-library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=bootstrap --mathjax --variable 'mathjax-url=https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-in-header /tmp/Rtmp5xLABn/rmarkdown-str1aa7e154470.html 
+/usr/lib/rstudio-server/bin/quarto/bin/pandoc +RTS -K512m -RTS articles_by_affiliation.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output articles_by_affiliation.html --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmarkdown/lua/latex-div.lua --self-contained --variable bs3=TRUE --standalone --section-divs --template /usr/local/lib/R/site-library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=bootstrap --mathjax --variable 'mathjax-url=https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-in-header /tmp/RtmpKO3G9k/rmarkdown-str4173354ecec.html 
 
 Output created: articles_by_affiliation.html
 > 
 > proc.time()
-    user   system  elapsed 
-  68.583    1.246 1314.359 
+   user  system elapsed 
+ 47.223   2.025 798.846 

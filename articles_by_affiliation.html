@@ -483,7 +483,7 @@ if ( file.exists(issns.file) ) {
 # clean read-back
 new.df &lt;- readRDS(file= new.file.Rds)</code></pre>
 <p>We read <strong>13096</strong> article records for
-<strong>13</strong> journals, with <strong>28878</strong> article-author
+<strong>13</strong> journals, with <strong>28853</strong> article-author
 observations:</p>
 <table>
 <thead>
@@ -511,7 +511,7 @@ observations:</p>
 </tr>
 <tr class="odd">
 <td align="left">American Economic Review</td>
-<td align="right">9847</td>
+<td align="right">9822</td>
 </tr>
 <tr class="even">
 <td align="left">Journal of Political Economy</td>
@@ -560,7 +560,7 @@ saveRDS(issns, file= issns.file)</code></pre>
 <div id="writing-out-final-files" class="section level2">
 <h2>Writing out final files</h2>
 <p>We finalize by creating a combined file with all records, and a
-corresponding CSV file.</p>
+corresponding CSV file. These can be re-used.</p>
 <pre class="r"><code># Append new.df and full.file
 
 
@@ -573,6 +573,9 @@ if (file.exists(full.file.Rds)) {
 
 saveRDS(full.file,file=full.file.Rds)
 write.csv(full.file,file=full.file.csv,row.names = FALSE)</code></pre>
+</div>
+<div id="finding-target-institutions-authors" class="section level2">
+<h2>Finding target institutions’ authors</h2>
 <p>Now pull out the selected affiliation (“World Bank, IMF,
 International Monetary Fund”):</p>
 <pre class="r"><code>full.file &lt;- readRDS(full.file.Rds)
@@ -587,11 +590,43 @@ for ( target in affiliation.target ) {
     target.df &lt;- tmp.df
   }
   rm(tmp.df)
-}
+}</code></pre>
+<p>As it turns out, the Journal of Political Economy does not encode its
+metadata with affiliations. We thus need to search for publications by
+specific authors. Note that this might yield papers that are from these
+authors when they were not yet, or no longer, at the relevant
+institutions.</p>
+<pre class="r"><code># first file was manually obtained from IMF website
+# It was manully cleaned using 
+# sed &#39;s+&quot;&quot;+&quot;+g&#39;  imf_authors.csv | sed &#39;s+&quot;&quot;+&quot;+g&#39; &gt; cleaned_imf_cvs.csv
+library(readr)
+target.authors &lt;- read_csv(&quot;data/inputs/cleaned_imf_cvs.csv&quot;,
+                    col_names = FALSE)</code></pre>
+<pre><code>## Rows: 161 Columns: 2
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr (2): X1, X2
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>names(target.authors) &lt;- c(&quot;last&quot;,&quot;first&quot;)
+target.authors$institution = &quot;IMF&quot;
 
-# Save the target file
+# An equivalent list from the World Bank would be useful.
 
-saveRDS(target.df,target.file.Rds)
+# Now merge against the full file and identify the subset of publications by these authors.
+
+jpe.imf &lt;- left_join(full.file %&gt;% filter(container.title==&quot;Journal of Political Economy&quot;),target.authors,c(&quot;family&quot;=&quot;last&quot;,&quot;given&quot;=&quot;first&quot;)) %&gt;%
+  filter(!is.na(institution)) %&gt;%
+  select(-institution) %&gt;%
+  rename(institution = affiliations)
+
+# now append that to the target file
+target.df &lt;- bind_rows(target.df,jpe.imf)</code></pre>
+</div>
+<div id="save-the-target-file" class="section level2">
+<h2>Save the target file</h2>
+<pre class="r"><code>saveRDS(target.df,target.file.Rds)
 write.csv(target.df,target.file.csv,row.names = FALSE)
 
 # subset to unique articles
@@ -600,30 +635,2736 @@ target.df %&gt;% select(container.title,published.print,doi,title,detected_targe
   distinct() %&gt;%
   mutate(url=paste0(&quot;https://doi.org/&quot;,doi)) -&gt; target.articles
 write.csv(target.articles,target.articles.csv,row.names = FALSE)</code></pre>
-<p>We found 304:</p>
+<p>We found 305:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">detected_target</th>
+<th align="right">Count</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">IMF</td>
+<td align="right">13</td>
+</tr>
+<tr class="even">
+<td align="left">International Monetary Fund</td>
+<td align="right">105</td>
+</tr>
+<tr class="odd">
+<td align="left">World Bank</td>
+<td align="right">184</td>
+</tr>
+<tr class="even">
+<td align="left">NA</td>
+<td align="right">3</td>
+</tr>
+</tbody>
+</table>
 <p>(Table may contain some double-counting if the same article has
 authors from multiple targeted institutions)</p>
 <p>Here are the articles we found:</p>
+<table>
+<colgroup>
+<col width="14%" />
+<col width="5%" />
+<col width="10%" />
+<col width="46%" />
+<col width="8%" />
+<col width="15%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">container.title</th>
+<th align="left">published.print</th>
+<th align="left">doi</th>
+<th align="left">title</th>
+<th align="left">detected_target</th>
+<th align="left">url</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2019-07-01</td>
+<td align="left">10.1257/app.20170128</td>
+<td align="left">Long-Run Effects of Temporary Incentives on Medical
+Care Productivity</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20170128" class="uri">https://doi.org/10.1257/app.20170128</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2014-10-01</td>
+<td align="left">10.1257/app.6.4.197</td>
+<td align="left">Soil Endowments, Female Labor Force Participation, and
+the Demographic Deficit of Women in India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.6.4.197" class="uri">https://doi.org/10.1257/app.6.4.197</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2016-10-01</td>
+<td align="left">10.1257/app.20150149</td>
+<td align="left">The Impact of High School Financial Education: Evidence
+from a Large-Scale Evaluation in Brazil</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20150149" class="uri">https://doi.org/10.1257/app.20150149</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2020-04-01</td>
+<td align="left">10.1257/app.20180369</td>
+<td align="left">Do Management Interventions Last? Evidence from
+India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20180369" class="uri">https://doi.org/10.1257/app.20180369</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2016-04-01</td>
+<td align="left">10.1257/app.20150023</td>
+<td align="left">The Returns to Microenterprise Support among the
+Ultrapoor: A Field Experiment in Postwar Uganda</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20150023" class="uri">https://doi.org/10.1257/app.20150023</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2019-01-01</td>
+<td align="left">10.1257/app.20170497</td>
+<td align="left">Labor Drops: Experimental Evidence on the Return to
+Additional Labor in Microenterprises</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20170497" class="uri">https://doi.org/10.1257/app.20170497</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2016-10-01</td>
+<td align="left">10.1257/app.20130399</td>
+<td align="left">What Does Debt Relief Do for Development? Evidence from
+India’s Bailout for Rural Households</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20130399" class="uri">https://doi.org/10.1257/app.20130399</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2013-01-01</td>
+<td align="left">10.1257/app.5.2.122</td>
+<td align="left">The Demand for, and Consequences of, Formalization
+among Informal Firms in Sri Lanka</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.5.2.122" class="uri">https://doi.org/10.1257/app.5.2.122</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2010-10-01</td>
+<td align="left">10.1257/app.2.4.213</td>
+<td align="left">Put Your Money Where Your Butt Is: A Commitment
+Contract for Smoking Cessation</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.2.4.213" class="uri">https://doi.org/10.1257/app.2.4.213</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2021-04-01</td>
+<td align="left">10.1257/app.20180340</td>
+<td align="left">Growing Markets through Business Training for Female
+Entrepreneurs: A Market-Level Randomized Experiment in Kenya</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20180340" class="uri">https://doi.org/10.1257/app.20180340</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2009-09-01</td>
+<td align="left">10.1257/app.1.4.200</td>
+<td align="left">In Pursuit of Balance: Randomization in Practice in
+Development Field Experiments</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.1.4.200" class="uri">https://doi.org/10.1257/app.1.4.200</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2021-07-01</td>
+<td align="left">10.1257/app.20190083</td>
+<td align="left">Credit Rationing and Pass-Through in Supply Chains:
+Theory and Evidence from Bangladesh</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20190083" class="uri">https://doi.org/10.1257/app.20190083</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2014-10-01</td>
+<td align="left">10.1257/app.6.4.35</td>
+<td align="left">Citizenship, Fertility, and Parental Investments</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.6.4.35" class="uri">https://doi.org/10.1257/app.6.4.35</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2014-10-01</td>
+<td align="left">10.1257/app.6.4.1</td>
+<td align="left">Should Aid Reward Performance? Evidence from a Field
+Experiment on Health and Education in Indonesia</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.6.4.1" class="uri">https://doi.org/10.1257/app.6.4.1</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2011-01-01</td>
+<td align="left">10.1257/app.3.1.35</td>
+<td align="left">Transactional Sex as a Response to Risk in Western
+Kenya</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.3.1.35" class="uri">https://doi.org/10.1257/app.3.1.35</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2012-07-01</td>
+<td align="left">10.1257/app.4.3.64</td>
+<td align="left">Enforcement of Labor Regulation and Informality</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.4.3.64" class="uri">https://doi.org/10.1257/app.4.3.64</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2021-01-01</td>
+<td align="left">10.1257/app.20190067</td>
+<td align="left">Poverty and Migration in the Digital Age: Experimental
+Evidence on Mobile Banking in Bangladesh</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20190067" class="uri">https://doi.org/10.1257/app.20190067</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2013-01-01</td>
+<td align="left">10.1257/app.5.1.104</td>
+<td align="left">Barriers to Household Risk Management: Evidence from
+India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.5.1.104" class="uri">https://doi.org/10.1257/app.5.1.104</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2010-07-01</td>
+<td align="left">10.1257/app.2.3.60</td>
+<td align="left">Microfinance Games</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.2.3.60" class="uri">https://doi.org/10.1257/app.2.3.60</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2023-01-01</td>
+<td align="left">10.1257/app.20210041</td>
+<td align="left">The Effects of Working While in School: Evidence from
+Employment Lotteries</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20210041" class="uri">https://doi.org/10.1257/app.20210041</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2010-07-01</td>
+<td align="left">10.1257/app.2.3.190</td>
+<td align="left">Service Delivery and Corruption in Public Services: How
+Does History Matter?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.2.3.190" class="uri">https://doi.org/10.1257/app.2.3.190</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2017-10-01</td>
+<td align="left">10.1257/app.20150342</td>
+<td align="left">Customary Norms, Inheritance, and Human Capital:
+Evidence from a Reform of the Matrilineal System in Ghana</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20150342" class="uri">https://doi.org/10.1257/app.20150342</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2019-04-01</td>
+<td align="left">10.1257/app.20170566</td>
+<td align="left">Bridging the Intention-Behavior Gap? The Effect of
+Plan-Making Prompts on Job Search and Employment</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20170566" class="uri">https://doi.org/10.1257/app.20170566</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2018-01-01</td>
+<td align="left">10.1257/app.20130480</td>
+<td align="left">Together We Will: Experimental Evidence on Female
+Voting Behavior in Pakistan</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20130480" class="uri">https://doi.org/10.1257/app.20130480</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2017-01-01</td>
+<td align="left">10.1257/app.20150512</td>
+<td align="left">Politics and Local Economic Growth: Evidence from
+India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20150512" class="uri">https://doi.org/10.1257/app.20150512</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2011-04-01</td>
+<td align="left">10.1257/app.3.2.167</td>
+<td align="left">Improving the Design of Conditional Transfer Programs:
+Evidence from a Randomized Education Experiment in Colombia</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.3.2.167" class="uri">https://doi.org/10.1257/app.3.2.167</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2013-01-01</td>
+<td align="left">10.1257/app.5.2.29</td>
+<td align="left">School Inputs, Household Substitution, and Test
+Scores</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.5.2.29" class="uri">https://doi.org/10.1257/app.5.2.29</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2014-04-01</td>
+<td align="left">10.1257/app.6.2.49</td>
+<td align="left">Distortions in the International Migrant Labor Market:
+Evidence from Filipino Migration and Wage Responses to Destination
+Country Economic Shocks</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.6.2.49" class="uri">https://doi.org/10.1257/app.6.2.49</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2013-01-01</td>
+<td align="left">10.1257/app.5.2.58</td>
+<td align="left">The Effect of Absenteeism and Clinic Protocol on Health
+Outcomes: The Case of Mother-to-Child Transmission of HIV in Kenya</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.5.2.58" class="uri">https://doi.org/10.1257/app.5.2.58</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2009-01-01</td>
+<td align="left">10.1257/app.1.1.112</td>
+<td align="left">Many Children Left Behind? Textbooks and Test Scores in
+Kenya</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.1.1.112" class="uri">https://doi.org/10.1257/app.1.1.112</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2012-04-01</td>
+<td align="left">10.1257/app.4.2.247</td>
+<td align="left">Cash Transfers, Behavioral Changes, and Cognitive
+Development in Early Childhood: Evidence from a Randomized
+Experiment</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.4.2.247" class="uri">https://doi.org/10.1257/app.4.2.247</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2010-07-01</td>
+<td align="left">10.1257/app.2.3.22</td>
+<td align="left">Information, Direct Access to Farmers, and Rural Market
+Performance in Central India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.2.3.22" class="uri">https://doi.org/10.1257/app.2.3.22</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2011-04-01</td>
+<td align="left">10.1257/app.3.2.137</td>
+<td align="left">Purchasing Power Parity Exchange Rates for the Global
+Poor</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.3.2.137" class="uri">https://doi.org/10.1257/app.3.2.137</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2018-07-01</td>
+<td align="left">10.1257/app.20160183</td>
+<td align="left">Exploiting Externalities to Estimate the Long-Term
+Effects of Early Childhood Deworming</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20160183" class="uri">https://doi.org/10.1257/app.20160183</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2011-07-01</td>
+<td align="left">10.1257/app.3.3.29</td>
+<td align="left">Do Value-Added Estimates Add Value? Accounting for
+Learning Dynamics</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.3.3.29" class="uri">https://doi.org/10.1257/app.3.3.29</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2022-01-01</td>
+<td align="left">10.1257/app.20190722</td>
+<td align="left">Does Patient Demand Contribute to the Overuse of
+Prescription Drugs?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20190722" class="uri">https://doi.org/10.1257/app.20190722</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2009-06-01</td>
+<td align="left">10.1257/app.1.3.1</td>
+<td align="left">Are Women More Credit Constrained? Experimental
+Evidence on Gender and Microenterprise Returns</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.1.3.1" class="uri">https://doi.org/10.1257/app.1.3.1</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2022-10-01</td>
+<td align="left">10.1257/app.20200306</td>
+<td align="left">Using Individual-Level Randomized Treatment to Learn
+about Market Structure</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20200306" class="uri">https://doi.org/10.1257/app.20200306</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2010-10-01</td>
+<td align="left">10.1257/app.2.4.236</td>
+<td align="left">The Importance of Being Wanted</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.2.4.236" class="uri">https://doi.org/10.1257/app.2.4.236</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2010-04-01</td>
+<td align="left">10.1257/app.2.2.179</td>
+<td align="left">Disclosure by Politicians</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.2.2.179" class="uri">https://doi.org/10.1257/app.2.2.179</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2017-01-01</td>
+<td align="left">10.1257/app.20150027</td>
+<td align="left">Experimental Evidence on the Long-Run Impact of
+Community-Based Monitoring</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20150027" class="uri">https://doi.org/10.1257/app.20150027</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2018-07-01</td>
+<td align="left">10.1257/app.20160469</td>
+<td align="left">Incentivizing Safer Sexual Behavior: Evidence from a
+Lottery Experiment on HIV Prevention</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20160469" class="uri">https://doi.org/10.1257/app.20160469</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2020-01-01</td>
+<td align="left">10.1257/app.20170416</td>
+<td align="left">Women’s Empowerment in Action: Evidence from a
+Randomized Control Trial in Africa</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/app.20170416" class="uri">https://doi.org/10.1257/app.20170416</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2015-08-01</td>
+<td align="left">10.1257/pol.20130225</td>
+<td align="left">Turning a Shove into a Nudge? A “Labeled Cash Transfer”
+for Education</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20130225" class="uri">https://doi.org/10.1257/pol.20130225</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2022-11-01</td>
+<td align="left">10.1257/pol.20200778</td>
+<td align="left">Adviser Value Added and Student Outcomes: Evidence from
+Randomly Assigned College Advisers</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20200778" class="uri">https://doi.org/10.1257/pol.20200778</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2017-11-01</td>
+<td align="left">10.1257/pol.20150293</td>
+<td align="left">Beggar-Thy-Neighbor Effects of Exchange Rates: A Study
+of the Renminbi</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20150293" class="uri">https://doi.org/10.1257/pol.20150293</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2022-11-01</td>
+<td align="left">10.1257/pol.20190628</td>
+<td align="left">Health Care Rationing in Public Insurance Programs:
+Evidence from Medicaid</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20190628" class="uri">https://doi.org/10.1257/pol.20190628</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2022-02-01</td>
+<td align="left">10.1257/pol.20200123</td>
+<td align="left">Technology, Taxation, and Corruption: Evidence from the
+Introduction of Electronic Tax Filing</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20200123" class="uri">https://doi.org/10.1257/pol.20200123</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2010-02-01</td>
+<td align="left">10.1257/pol.2.1.1</td>
+<td align="left">Pitfalls of Participatory Programs: Evidence from a
+Randomized Evaluation in Education in India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.2.1.1" class="uri">https://doi.org/10.1257/pol.2.1.1</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2014-11-01</td>
+<td align="left">10.1257/pol.6.4.207</td>
+<td align="left">Cash for Coolers: Evaluating a Large-Scale Appliance
+Replacement Program in Mexico</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.6.4.207" class="uri">https://doi.org/10.1257/pol.6.4.207</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2009-01-01</td>
+<td align="left">10.1257/pol.1.1.28</td>
+<td align="left">A Theory of Urban Squatting and Land-Tenure
+Formalization in Developing Countries</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.1.1.28" class="uri">https://doi.org/10.1257/pol.1.1.28</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2019-08-01</td>
+<td align="left">10.1257/pol.20160589</td>
+<td align="left">Casting a Wider Tax Net: Experimental Evidence from
+Costa Rica</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20160589" class="uri">https://doi.org/10.1257/pol.20160589</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2009-01-01</td>
+<td align="left">10.1257/pol.1.1.75</td>
+<td align="left">Housing, Health, and Happiness</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.1.1.75" class="uri">https://doi.org/10.1257/pol.1.1.75</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2021-11-01</td>
+<td align="left">10.1257/pol.20180564</td>
+<td align="left">Corporate Taxation under Weak Enforcement</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20180564" class="uri">https://doi.org/10.1257/pol.20180564</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2021-08-01</td>
+<td align="left">10.1257/pol.20200100</td>
+<td align="left">Using Labor Supply Elasticities to Learn about Income
+Inequality: The Role of Productivities versus Preferences</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20200100" class="uri">https://doi.org/10.1257/pol.20200100</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2016-04-01</td>
+<td align="left">10.1257/mac.20140147</td>
+<td align="left">Excessive Financing Costs in a Representative Agent
+Framework</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20140147" class="uri">https://doi.org/10.1257/mac.20140147</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2010-10-01</td>
+<td align="left">10.1257/mac.2.4.46</td>
+<td align="left">Understanding PPPs and PPP-based National Accounts:
+Comment</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.2.4.46" class="uri">https://doi.org/10.1257/mac.2.4.46</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2014-10-01</td>
+<td align="left">10.1257/mac.6.4.209</td>
+<td align="left">Medium Term Business Cycles in Developing
+Countries</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.6.4.209" class="uri">https://doi.org/10.1257/mac.6.4.209</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2010-07-01</td>
+<td align="left">10.1257/mac.2.3.31</td>
+<td align="left">The Effect of Corporate Taxes on Investment and
+Entrepreneurship</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.2.3.31" class="uri">https://doi.org/10.1257/mac.2.3.31</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2022-04-01</td>
+<td align="left">10.1257/mac.20200234</td>
+<td align="left">Entry Barriers, Idiosyncratic Distortions, and the Firm
+Size Distribution</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20200234" class="uri">https://doi.org/10.1257/mac.20200234</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2014-01-01</td>
+<td align="left">10.1257/mac.6.1.102</td>
+<td align="left">Wage Rigidity and Disinflation in Emerging
+Countries</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.6.1.102" class="uri">https://doi.org/10.1257/mac.6.1.102</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2018-04-01</td>
+<td align="left">10.1257/mac.20140075</td>
+<td align="left">Entry and Exit, Multiproduct Firms, and Allocative
+Distortions</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20140075" class="uri">https://doi.org/10.1257/mac.20140075</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Microeconomics</td>
+<td align="left">2016-02-01</td>
+<td align="left">10.1257/mic.20140103</td>
+<td align="left">A Theory of Rational Demand for Index Insurance</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/mic.20140103" class="uri">https://doi.org/10.1257/mic.20140103</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Microeconomics</td>
+<td align="left">2022-02-01</td>
+<td align="left">10.1257/mic.20190166</td>
+<td align="left">Relationships on the Rocks: Contract Evolution in a
+Market for Ice</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/mic.20190166" class="uri">https://doi.org/10.1257/mic.20190166</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2017-02-01</td>
+<td align="left">10.1257/aer.20150314</td>
+<td align="left">Misallocation and the Distribution of Global
+Volatility</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20150314" class="uri">https://doi.org/10.1257/aer.20150314</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2008-04-01</td>
+<td align="left">10.1257/aer.98.2.457</td>
+<td align="left">Firm-Level Heterogeneous Productivity and Demand
+Shocks: Evidence from Bangladesh</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.98.2.457" class="uri">https://doi.org/10.1257/aer.98.2.457</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2010-05-01</td>
+<td align="left">10.1257/aer.100.2.614</td>
+<td align="left">Wage Subsidies for Microenterprises</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.100.2.614" class="uri">https://doi.org/10.1257/aer.100.2.614</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2010-09-01</td>
+<td align="left">10.1257/aer.100.4.1804</td>
+<td align="left"><i>Watta Satta</i>: Bride Exchange and Women’s Welfare
+in Rural Pakistan</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.100.4.1804" class="uri">https://doi.org/10.1257/aer.100.4.1804</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2017-04-01</td>
+<td align="left">10.1257/aer.20150503</td>
+<td align="left">Reducing Crime and Violence: Experimental Evidence from
+Cognitive Behavioral Therapy in Liberia</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20150503" class="uri">https://doi.org/10.1257/aer.20150503</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2021-07-01</td>
+<td align="left">10.1257/aer.20191972</td>
+<td align="left">Recruitment, Effort, and Retention Effects of
+Performance Contracts for Civil Servants: Experimental Evidence from
+Rwandan Primary Schools</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20191972" class="uri">https://doi.org/10.1257/aer.20191972</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2013-05-01</td>
+<td align="left">10.1257/aer.103.3.362</td>
+<td align="left">Behavioral Biases and Firm Behavior: Evidence from
+Kenyan Retail Shops</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.103.3.362" class="uri">https://doi.org/10.1257/aer.103.3.362</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2017-06-01</td>
+<td align="left">10.1257/aer.20140774</td>
+<td align="left">Report Cards: The Impact of Providing School and Child
+Test Scores on Educational Markets</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20140774" class="uri">https://doi.org/10.1257/aer.20140774</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2021-05-01</td>
+<td align="left">10.1257/aer.20190240</td>
+<td align="left">Cross-Region Transfer Multipliers in a Monetary Union:
+Evidence from Social Security and Stimulus Payments</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20190240" class="uri">https://doi.org/10.1257/aer.20190240</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2010-05-01</td>
+<td align="left">10.1257/aer.100.2.619</td>
+<td align="left">Why Do Firms in Developing Countries Have Low
+Productivity?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.100.2.619" class="uri">https://doi.org/10.1257/aer.100.2.619</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2016-12-01</td>
+<td align="left">10.1257/aer.20151138</td>
+<td align="left">Quality and Accountability in Health Care Delivery:
+Audit-Study Evidence from Primary Care in India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20151138" class="uri">https://doi.org/10.1257/aer.20151138</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2021-12-01</td>
+<td align="left">10.1257/aer.20181801</td>
+<td align="left">Prep School for Poor Kids: The Long-Run Impacts of Head
+Start on Human Capital and Economic Self-Sufficiency</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20181801" class="uri">https://doi.org/10.1257/aer.20181801</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2000-03-01</td>
+<td align="left">10.1257/aer.90.1.147</td>
+<td align="left">Liberalization, Moral Hazard in Banking, and Prudential
+Regulation: Are Capital Requirements Enough?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.90.1.147" class="uri">https://doi.org/10.1257/aer.90.1.147</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2012-02-01</td>
+<td align="left">10.1257/aer.102.1.504</td>
+<td align="left">Why Don’t We See Poverty Convergence?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.102.1.504" class="uri">https://doi.org/10.1257/aer.102.1.504</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2006-04-01</td>
+<td align="left">10.1257/000282806777212611</td>
+<td align="left">Discrimination, Social Identity, and Durable
+Inequalities</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/000282806777212611" class="uri">https://doi.org/10.1257/000282806777212611</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2007-04-01</td>
+<td align="left">10.1257/aer.97.2.316</td>
+<td align="left">Aid Effectiveness—Opening the Black Box</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.97.2.316" class="uri">https://doi.org/10.1257/aer.97.2.316</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2017-10-01</td>
+<td align="left">10.1257/aer.20141070</td>
+<td align="left">Exporter Dynamics and Partial-Year Effects</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20141070" class="uri">https://doi.org/10.1257/aer.20141070</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2022-11-01</td>
+<td align="left">10.1257/aer.20211616</td>
+<td align="left">The Psychosocial Value of Employment: Evidence from a
+Refugee Camp</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20211616" class="uri">https://doi.org/10.1257/aer.20211616</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2017-08-01</td>
+<td align="left">10.1257/aer.20151404</td>
+<td align="left">Identifying and Spurring High-Growth Entrepreneurship:
+Experimental Evidence from a Business Plan Competition</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20151404" class="uri">https://doi.org/10.1257/aer.20151404</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2002-08-01</td>
+<td align="left">10.1257/00028280260344588</td>
+<td align="left">Terror as a Bargaining Instrument: A Case Study of
+Dowry Violence in Rural India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/00028280260344588" class="uri">https://doi.org/10.1257/00028280260344588</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2006-04-01</td>
+<td align="left">10.1257/000282806777212387</td>
+<td align="left">Who Are China’s Entrepreneurs?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/000282806777212387" class="uri">https://doi.org/10.1257/000282806777212387</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2017-05-01</td>
+<td align="left">10.1257/aer.p20171053</td>
+<td align="left">Heat Exposure and Youth Migration in Central America
+and the Caribbean</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.p20171053" class="uri">https://doi.org/10.1257/aer.p20171053</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2022-04-01</td>
+<td align="left">10.1257/aer.20200738</td>
+<td align="left">Public Procurement in Law and Practice</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20200738" class="uri">https://doi.org/10.1257/aer.20200738</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2013-04-01</td>
+<td align="left">10.1257/aer.103.2.1071</td>
+<td align="left">Self-Enforcing Trade Agreements: Evidence from
+Time-Varying Trade Policy</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.103.2.1071" class="uri">https://doi.org/10.1257/aer.103.2.1071</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2017-08-01</td>
+<td align="left">10.1257/aer.20150592</td>
+<td align="left">Hayek, Local Information, and Commanding Heights:
+Decentralizing State-Owned Enterprises in China</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20150592" class="uri">https://doi.org/10.1257/aer.20150592</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2003-04-01</td>
+<td align="left">10.1257/000282803321946787</td>
+<td align="left">The Future of the IMF and World Bank: Panel
+Discussion</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/000282803321946787" class="uri">https://doi.org/10.1257/000282803321946787</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2008-08-01</td>
+<td align="left">10.1257/aer.98.4.1675</td>
+<td align="left">Trade Policy and Loss Aversion</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.98.4.1675" class="uri">https://doi.org/10.1257/aer.98.4.1675</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2008-04-01</td>
+<td align="left">10.1257/aer.98.2.494</td>
+<td align="left">Spite and Development</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.98.2.494" class="uri">https://doi.org/10.1257/aer.98.2.494</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2021-06-01</td>
+<td align="left">10.1257/aer.20190586</td>
+<td align="left">The Selection of Talent: Experimental and Structural
+Evidence from Ethiopia</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20190586" class="uri">https://doi.org/10.1257/aer.20190586</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2002-11-01</td>
+<td align="left">10.1257/000282802762024575</td>
+<td align="left">Hazards of Expropriation: Tenure Insecurity and
+Investment in Rural China</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/000282802762024575" class="uri">https://doi.org/10.1257/000282802762024575</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2016-01-01</td>
+<td align="left">10.1257/aer.20141301</td>
+<td align="left">The Market Impacts of Pharmaceutical Product Patents in
+Developing Countries: Evidence from India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20141301" class="uri">https://doi.org/10.1257/aer.20141301</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2012-12-01</td>
+<td align="left">10.1257/aer.102.7.3406</td>
+<td align="left">Exports, Export Destinations, and Skills</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.102.7.3406" class="uri">https://doi.org/10.1257/aer.102.7.3406</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2012-05-01</td>
+<td align="left">10.1257/aer.102.3.555</td>
+<td align="left">Love and Money by Parental Matchmaking: Evidence from
+Urban Couples in China</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.102.3.555" class="uri">https://doi.org/10.1257/aer.102.3.555</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2005-08-01</td>
+<td align="left">10.1257/0002828054825682</td>
+<td align="left">Homeownership, Community Interactions, and
+Segregation</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/0002828054825682" class="uri">https://doi.org/10.1257/0002828054825682</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2013-05-01</td>
+<td align="left">10.1257/aer.103.3.263</td>
+<td align="left">Is Ignorance Bliss? The Effect of Asymmetric
+Information between Spouses on Intra-Household Allocations</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.103.3.263" class="uri">https://doi.org/10.1257/aer.103.3.263</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2014-05-01</td>
+<td align="left">10.1257/aer.104.5.354</td>
+<td align="left">Labor Supply and Household Dynamics</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.104.5.354" class="uri">https://doi.org/10.1257/aer.104.5.354</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2008-08-01</td>
+<td align="left">10.1257/aer.98.4.1722</td>
+<td align="left">A Note on Different Approaches to Index Number
+Theory</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.98.4.1722" class="uri">https://doi.org/10.1257/aer.98.4.1722</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2016-06-01</td>
+<td align="left">10.1257/aer.20131455</td>
+<td align="left">The Demand for Energy-Using Assets among the World’s
+Rising Middle Classes</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20131455" class="uri">https://doi.org/10.1257/aer.20131455</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2004-04-01</td>
+<td align="left">10.1257/0002828041301524</td>
+<td align="left">On the Measurement of Product Variety in Trade</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/0002828041301524" class="uri">https://doi.org/10.1257/0002828041301524</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2010-03-01</td>
+<td align="left">10.1257/aer.100.1.247</td>
+<td align="left">Multinationals and Anti-Sweatshop Activism</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.100.1.247" class="uri">https://doi.org/10.1257/aer.100.1.247</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2022-07-01</td>
+<td align="left">10.1257/aer.20210059</td>
+<td align="left">Factor Market Failures and the Adoption of Irrigation
+in Rwanda</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20210059" class="uri">https://doi.org/10.1257/aer.20210059</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2016-07-01</td>
+<td align="left">10.1257/aer.20140705</td>
+<td align="left">Network Structure and the Aggregation of Information:
+Theory and Evidence from Indonesia</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20140705" class="uri">https://doi.org/10.1257/aer.20140705</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2002-08-01</td>
+<td align="left">10.1257/00028280260344443</td>
+<td align="left">Inequality Among World Citizens: 1820–1992</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/00028280260344443" class="uri">https://doi.org/10.1257/00028280260344443</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2005-05-01</td>
+<td align="left">10.1257/0002828054201468</td>
+<td align="left">Ethnic Polarization, Potential Conflict, and Civil
+Wars</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/0002828054201468" class="uri">https://doi.org/10.1257/0002828054201468</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2016-06-01</td>
+<td align="left">10.1257/aer.20131687</td>
+<td align="left">Domestic Value Added in Exports: Theory and Firm
+Evidence from China</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20131687" class="uri">https://doi.org/10.1257/aer.20131687</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2015-05-01</td>
+<td align="left">10.1257/aer.p20151003</td>
+<td align="left">The Impact of Ethnic Diversity in Bureaucracies:
+Evidence from the Nigerian Civil Service</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.p20151003" class="uri">https://doi.org/10.1257/aer.p20151003</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2010-05-01</td>
+<td align="left">10.1257/aer.100.2.141</td>
+<td align="left">Equilibrium Fictions: A Cognitive Approach to Societal
+Rigidity</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.100.2.141" class="uri">https://doi.org/10.1257/aer.100.2.141</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2010-05-01</td>
+<td align="left">10.1257/aer.100.2.629</td>
+<td align="left">What Capital is Missing in Developing Countries?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.100.2.629" class="uri">https://doi.org/10.1257/aer.100.2.629</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2012-10-01</td>
+<td align="left">10.1257/aer.102.6.2923</td>
+<td align="left">Credit Market Consequences of Improved Personal
+Identification: Field Experimental Evidence from Malawi</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.102.6.2923" class="uri">https://doi.org/10.1257/aer.102.6.2923</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2004-05-01</td>
+<td align="left">10.1257/0002828041464533</td>
+<td align="left">After the Big Bang? Obstacles to the Emergence of the
+Rule of Law in Post-Communist Societies</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/0002828041464533" class="uri">https://doi.org/10.1257/0002828041464533</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2012-06-01</td>
+<td align="left">10.1257/aer.102.4.1206</td>
+<td align="left">Targeting the Poor: Evidence from a Field Experiment in
+Indonesia</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.102.4.1206" class="uri">https://doi.org/10.1257/aer.102.4.1206</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2015-05-01</td>
+<td align="left">10.1257/aer.p20151120</td>
+<td align="left">Can Alcohol Prohibition Reduce Violence Against
+Women?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.p20151120" class="uri">https://doi.org/10.1257/aer.p20151120</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2014-05-01</td>
+<td align="left">10.1257/aer.104.5.284</td>
+<td align="left">Dynamics of Demand for Index Insurance: Evidence from a
+Long-Run Field Experiment</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.104.5.284" class="uri">https://doi.org/10.1257/aer.104.5.284</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2000-09-01</td>
+<td align="left">10.1257/aer.90.4.847</td>
+<td align="left">Aid, Policies, and Growth</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.90.4.847" class="uri">https://doi.org/10.1257/aer.90.4.847</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2010-06-01</td>
+<td align="left">10.1257/aer.100.3.1008</td>
+<td align="left">Trade Shocks and Labor Adjustment: A Structural
+Empirical Approach</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.100.3.1008" class="uri">https://doi.org/10.1257/aer.100.3.1008</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2006-11-01</td>
+<td align="left">10.1257/aer.96.5.1477</td>
+<td align="left">Estimating the Effects of Global Patent Protection in
+Pharmaceuticals: A Case Study of Quinolones in India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.96.5.1477" class="uri">https://doi.org/10.1257/aer.96.5.1477</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2004-05-01</td>
+<td align="left">10.1257/0002828041464524</td>
+<td align="left">Aid, Policies, and Growth: Reply</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/0002828041464524" class="uri">https://doi.org/10.1257/0002828041464524</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2002-11-01</td>
+<td align="left">10.1257/000282802762024629</td>
+<td align="left">Vouchers for Private Schooling in Colombia: Evidence
+from a Randomized Natural Experiment</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/000282802762024629" class="uri">https://doi.org/10.1257/000282802762024629</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2022-11-01</td>
+<td align="left">10.1257/aer.20200961</td>
+<td align="left">Job Search and Hiring with Limited Information about
+Workseekers’ Skills</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20200961" class="uri">https://doi.org/10.1257/aer.20200961</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2018-02-01</td>
+<td align="left">10.1257/aer.20140647</td>
+<td align="left">Export Destinations and Input Prices</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20140647" class="uri">https://doi.org/10.1257/aer.20140647</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2014-05-01</td>
+<td align="left">10.1257/aer.104.5.586</td>
+<td align="left">Why Are Power Plants in India Less Efficient than Power
+Plants in the United States?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.104.5.586" class="uri">https://doi.org/10.1257/aer.104.5.586</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Quarterly Journal of Economics</td>
+<td align="left">2018-05-01</td>
+<td align="left">10.1093/qje/qjx040</td>
+<td align="left">Double for Nothing? Experimental Evidence on an
+Unconditional Teacher Salary Increase in Indonesia*</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/qje/qjx040" class="uri">https://doi.org/10.1093/qje/qjx040</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Quarterly Journal of Economics</td>
+<td align="left">2022-09-20</td>
+<td align="left">10.1093/qje/qjac020</td>
+<td align="left">Valuing the Global Mortality Consequences of Climate
+Change Accounting for Adaptation Costs and Benefits</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/qje/qjac020" class="uri">https://doi.org/10.1093/qje/qjac020</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Quarterly Journal of Economics</td>
+<td align="left">2020-02-01</td>
+<td align="left">10.1093/qje/qjz036</td>
+<td align="left">The Return to Protectionism*</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/qje/qjz036" class="uri">https://doi.org/10.1093/qje/qjz036</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Quarterly Journal of Economics</td>
+<td align="left">2018-08-01</td>
+<td align="left">10.1093/qje/qjx048</td>
+<td align="left">Status Goods: Experimental Evidence from Platinum
+Credit Cards*</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/qje/qjx048" class="uri">https://doi.org/10.1093/qje/qjx048</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Quarterly Journal of Economics</td>
+<td align="left">2022-12-15</td>
+<td align="left">10.1093/qje/qjac032</td>
+<td align="left">Corruption in Customs</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/qje/qjac032" class="uri">https://doi.org/10.1093/qje/qjac032</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Review of Economic Studies</td>
+<td align="left">2021-05-22</td>
+<td align="left">10.1093/restud/rdaa057</td>
+<td align="left">Anonymity or Distance? Job Search and Labour Market
+Exclusion in a Growing African City</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/restud/rdaa057" class="uri">https://doi.org/10.1093/restud/rdaa057</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Review of Economic Studies</td>
+<td align="left">2022-01-10</td>
+<td align="left">10.1093/restud/rdab005</td>
+<td align="left">Improving Management with Individual and Group-Based
+Consulting: Results from a Randomized Experiment in Colombia</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/restud/rdab005" class="uri">https://doi.org/10.1093/restud/rdab005</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2011-11-01</td>
+<td align="left">10.1111/j.1468-0297.2011.02476.x</td>
+<td align="left">Caste and Punishment: The Legacy of Caste Culture in
+Norm Enforcement</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2011.02476.x" class="uri">https://doi.org/10.1111/j.1468-0297.2011.02476.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2004-06-01</td>
+<td align="left">10.1111/j.1468-0297.2004.00221.x</td>
+<td align="left">Development Effectiveness: What have We Learnt?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2004.00221.x" class="uri">https://doi.org/10.1111/j.1468-0297.2004.00221.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2012-03-01</td>
+<td align="left">10.1111/j.1468-0297.2011.02475.x</td>
+<td align="left">Enterprise Recovery Following Natural Disasters</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2011.02475.x" class="uri">https://doi.org/10.1111/j.1468-0297.2011.02475.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2011-12-01</td>
+<td align="left">10.1111/j.1468-0297.2011.02452.x</td>
+<td align="left">Did Higher Inequality Impede Growth in Rural
+China?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2011.02452.x" class="uri">https://doi.org/10.1111/j.1468-0297.2011.02452.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2012-05-01</td>
+<td align="left">10.1111/j.1468-0297.2012.02498.x</td>
+<td align="left">The Economic Consequences of ‘Brain Drain’ of the Best
+and Brightest: Microeconomic Evidence from Five Countries</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2012.02498.x" class="uri">https://doi.org/10.1111/j.1468-0297.2012.02498.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2011-03-01</td>
+<td align="left">10.1111/j.1468-0297.2010.02403.x</td>
+<td align="left">Pre‐Industrial Inequality</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2010.02403.x" class="uri">https://doi.org/10.1111/j.1468-0297.2010.02403.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2000-10-01</td>
+<td align="left">10.1111/1468-0297.00569</td>
+<td align="left">What Explains the Success or Failure of Structural
+Adjustment Programmes?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00569" class="uri">https://doi.org/10.1111/1468-0297.00569</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2004-02-01</td>
+<td align="left">10.1111/j.0013-0133.2004.00186.x</td>
+<td align="left">Trade, Growth, and Poverty</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.0013-0133.2004.00186.x" class="uri">https://doi.org/10.1111/j.0013-0133.2004.00186.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2007-02-01</td>
+<td align="left">10.1111/j.1468-0297.2007.02017.x</td>
+<td align="left">Financial performance and Outreach: A Global Analysis
+of Leading Microbanks</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2007.02017.x" class="uri">https://doi.org/10.1111/j.1468-0297.2007.02017.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2023-01-13</td>
+<td align="left">10.1093/ej/ueac058</td>
+<td align="left">Long-Term and Intergenerational Effects of Education:
+Evidence from School Construction in Indonesia</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/ej/ueac058" class="uri">https://doi.org/10.1093/ej/ueac058</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2019-01-01</td>
+<td align="left">10.1111/ecoj.12594</td>
+<td align="left">Tackling Social Exclusion: Evidence from Chile</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12594" class="uri">https://doi.org/10.1111/ecoj.12594</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2000-03-01</td>
+<td align="left">10.1111/1468-0297.00527</td>
+<td align="left">Does Child Labour Displace Schooling? Evidence on
+Behavioural Responses to an Enrollment Subsidy</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00527" class="uri">https://doi.org/10.1111/1468-0297.00527</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2014-09</td>
+<td align="left">10.1111/ecoj.12077</td>
+<td align="left">The Labour Market Effects of Immigration and Emigration
+in OECD Countries</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12077" class="uri">https://doi.org/10.1111/ecoj.12077</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2016-12</td>
+<td align="left">10.1111/ecoj.12276</td>
+<td align="left">The Persistence of (Subnational) Fortune</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12276" class="uri">https://doi.org/10.1111/ecoj.12276</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2015-08-01</td>
+<td align="left">10.1111/ecoj.12300</td>
+<td align="left">Sovereign Debt and Joint Liability: An Economic Theory
+Model for Amending the Treaty of Lisbon</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12300" class="uri">https://doi.org/10.1111/ecoj.12300</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2005-04-01</td>
+<td align="left">10.1111/j.1468-0297.2005.00997.x</td>
+<td align="left">Cities and Specialisation: Evidence from South
+Asia</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2005.00997.x" class="uri">https://doi.org/10.1111/j.1468-0297.2005.00997.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2003-04-01</td>
+<td align="left">10.1111/1468-0297.00127</td>
+<td align="left">The simultaneous evolution of growth and
+inequality</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00127" class="uri">https://doi.org/10.1111/1468-0297.00127</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2018-02</td>
+<td align="left">10.1111/ecoj.12418</td>
+<td align="left">Management of Bureaucrats and Public Service Delivery:
+Evidence from the Nigerian Civil Service</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12418" class="uri">https://doi.org/10.1111/ecoj.12418</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2018-02</td>
+<td align="left">10.1111/ecoj.12378</td>
+<td align="left">Revising Commitments: Field Evidence on the Adjustment
+of Prior Choices</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12378" class="uri">https://doi.org/10.1111/ecoj.12378</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2014-05</td>
+<td align="left">10.1111/ecoj.12145</td>
+<td align="left">Changing Households’ Investment Behaviour through
+Social Interactions with Local Leaders: Evidence from a Randomised
+Transfer Programme</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12145" class="uri">https://doi.org/10.1111/ecoj.12145</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2022-09-19</td>
+<td align="left">10.1093/ej/ueac018</td>
+<td align="left">Transfers, Diversification and Household Risk
+Strategies: Can Productive Safety Nets Help Households Manage Climatic
+Variability?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/ej/ueac018" class="uri">https://doi.org/10.1093/ej/ueac018</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2001-03-01</td>
+<td align="left">10.1111/1468-0297.00609</td>
+<td align="left">Trust and Growth</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00609" class="uri">https://doi.org/10.1111/1468-0297.00609</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2021-11-08</td>
+<td align="left">10.1093/ej/ueab023</td>
+<td align="left">Does Democratisation Promote Competition? Evidence from
+Indonesia*</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/ej/ueab023" class="uri">https://doi.org/10.1093/ej/ueab023</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2018-07-01</td>
+<td align="left">10.1111/ecoj.12456</td>
+<td align="left">Transit Migration: All Roads Lead to America</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12456" class="uri">https://doi.org/10.1111/ecoj.12456</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2000-03-01</td>
+<td align="left">10.1111/1468-0297.00520</td>
+<td align="left">The Intriguing Relation Between Adult Minimum Wage and
+Child Labour</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00520" class="uri">https://doi.org/10.1111/1468-0297.00520</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2020-10-16</td>
+<td align="left">10.1093/ej/ueaa022</td>
+<td align="left">Education Quality and Teaching Practices</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/ej/ueaa022" class="uri">https://doi.org/10.1093/ej/ueaa022</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2016-09</td>
+<td align="left">10.1111/ecoj.12214</td>
+<td align="left">Wage Adjustment and Productivity Shocks</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12214" class="uri">https://doi.org/10.1111/ecoj.12214</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2007-04-01</td>
+<td align="left">10.1111/j.1468-0297.2007.02053.x</td>
+<td align="left">Home Grown or Imported? Initial Conditions, External
+Anchors and the Determinants of Institutional Reform in the Transition
+Economies</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2007.02053.x" class="uri">https://doi.org/10.1111/j.1468-0297.2007.02053.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2019-01-01</td>
+<td align="left">10.1111/ecoj.12533</td>
+<td align="left">Public-sector Employment in an Equilibrium Search and
+Matching Model</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12533" class="uri">https://doi.org/10.1111/ecoj.12533</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2016-02-01</td>
+<td align="left">10.1111/ecoj.12206</td>
+<td align="left">Services Reform and Manufacturing Performance: Evidence
+from India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12206" class="uri">https://doi.org/10.1111/ecoj.12206</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2011-11-01</td>
+<td align="left">10.1111/j.1468-0297.2011.02478.x</td>
+<td align="left">Introduction: Tastes, Castes and Culture: The Influence
+of Society on Preferences</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2011.02478.x" class="uri">https://doi.org/10.1111/j.1468-0297.2011.02478.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2016-03</td>
+<td align="left">10.1111/ecoj.12207</td>
+<td align="left">Highway to Success: The Impact of the Golden
+Quadrilateral Project for the Location and Performance of Indian
+Manufacturing</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12207" class="uri">https://doi.org/10.1111/ecoj.12207</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2009-01-01</td>
+<td align="left">10.1111/j.1468-0297.2008.02209.x</td>
+<td align="left">Estimating Trade Restrictiveness Indices</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2008.02209.x" class="uri">https://doi.org/10.1111/j.1468-0297.2008.02209.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2005-04-01</td>
+<td align="left">10.1111/j.1468-0297.2005.00992.x</td>
+<td align="left">Sargent‐Wallace Meets Krugman‐Flood‐Garber, or: Why
+Sovereign Debt Swaps do not Avert Macroeconomic Crises</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2005.00992.x" class="uri">https://doi.org/10.1111/j.1468-0297.2005.00992.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2003-06-01</td>
+<td align="left">10.1111/1468-0297.13913</td>
+<td align="left">The Role of Annuity Markets in Financing
+Retirement.</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.13913" class="uri">https://doi.org/10.1111/1468-0297.13913</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2000-01-01</td>
+<td align="left">10.1111/1468-0297.00502</td>
+<td align="left">Mexico’s Financial Sector Crisis: Propagative Linkages
+to Devaluation</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00502" class="uri">https://doi.org/10.1111/1468-0297.00502</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2018-07-01</td>
+<td align="left">10.1111/ecoj.12536</td>
+<td align="left">Cross‐country Perspectives on Migration and
+Development: Introduction</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12536" class="uri">https://doi.org/10.1111/ecoj.12536</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2008-08-01</td>
+<td align="left">10.1111/j.1468-0297.2008.02177.x</td>
+<td align="left">Exiting a Lawless State</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2008.02177.x" class="uri">https://doi.org/10.1111/j.1468-0297.2008.02177.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2010-08-01</td>
+<td align="left">10.1111/j.1468-0297.2010.02373.x</td>
+<td align="left">The Impact of Diagnostic Feedback to Teachers on
+Student Learning: Experimental Evidence from India</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2010.02373.x" class="uri">https://doi.org/10.1111/j.1468-0297.2010.02373.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2013-09-01</td>
+<td align="left">10.1111/ecoj.12020</td>
+<td align="left">Community Nurseries and the Nutritional Status of Poor
+Children. Evidence from Colombia</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12020" class="uri">https://doi.org/10.1111/ecoj.12020</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2022-01-07</td>
+<td align="left">10.1093/ej/ueab035</td>
+<td align="left">On the Quantity and Quality of Girls: Fertility,
+Parental Investments and Mortality</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/ej/ueab035" class="uri">https://doi.org/10.1093/ej/ueab035</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2000-07-01</td>
+<td align="left">10.1111/1468-0297.00562</td>
+<td align="left">Access to Markets and the Benefits of Rural Roads</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00562" class="uri">https://doi.org/10.1111/1468-0297.00562</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2010-05-01</td>
+<td align="left">10.1111/j.1468-0297.2010.02356.x</td>
+<td align="left">Multi‐Product Exporters: Product Churning, Uncertainty
+and Export Discoveries</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2010.02356.x" class="uri">https://doi.org/10.1111/j.1468-0297.2010.02356.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2002-01-01</td>
+<td align="left">10.1111/1468-0297.0j673</td>
+<td align="left">True World Income Distribution, 1988 and 1993: First
+Calculation Based on Household Surveys Alone</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.0j673" class="uri">https://doi.org/10.1111/1468-0297.0j673</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2016-11</td>
+<td align="left">10.1111/ecoj.12211</td>
+<td align="left">The Impact of Vocational Training for the Unemployed:
+Experimental Evidence from Turkey</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12211" class="uri">https://doi.org/10.1111/ecoj.12211</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2020-07-01</td>
+<td align="left">10.1093/ej/ueaa013</td>
+<td align="left">The Ecological Impact of Transportation
+Infrastructure</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/ej/ueaa013" class="uri">https://doi.org/10.1093/ej/ueaa013</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2007-10-01</td>
+<td align="left">10.1111/j.1468-0297.2007.02082.x</td>
+<td align="left">Budget Support Versus Project Aid: A Theoretical
+Appraisal</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2007.02082.x" class="uri">https://doi.org/10.1111/j.1468-0297.2007.02082.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2006-10-01</td>
+<td align="left">10.1111/j.1468-0297.2006.01117.x</td>
+<td align="left">Land Reallocation in an Agrarian Transition</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2006.01117.x" class="uri">https://doi.org/10.1111/j.1468-0297.2006.01117.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2018-07-01</td>
+<td align="left">10.1111/ecoj.12463</td>
+<td align="left">Why Don’t Remittances Appear to Affect Growth?</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12463" class="uri">https://doi.org/10.1111/ecoj.12463</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2022-07-14</td>
+<td align="left">10.1093/ej/ueac012</td>
+<td align="left">Patterns of Labour Market Adjustment to Trade Shocks
+with Imperfect Capital Mobility</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1093/ej/ueac012" class="uri">https://doi.org/10.1093/ej/ueac012</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2002-01-01</td>
+<td align="left">10.1111/1468-0297.0j679</td>
+<td align="left">Is There an Intrahousehold ‘Flypaper Effect’? Evidence
+from a School Feeding Programme</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.0j679" class="uri">https://doi.org/10.1111/1468-0297.0j679</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2004-01-01</td>
+<td align="left">10.1046/j.0013-0133.2003.0174.x</td>
+<td align="left">The Economical Control of Infectious Diseases</td>
+<td align="left">World Bank</td>
+<td align="left"><a href="https://doi.org/10.1046/j.0013-0133.2003.0174.x" class="uri">https://doi.org/10.1046/j.0013-0133.2003.0174.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2012-10-01</td>
+<td align="left">10.1257/app.4.4.165</td>
+<td align="left">The Power of Political Voice: Women’s Political
+Representation and Crime in India</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1257/app.4.4.165" class="uri">https://doi.org/10.1257/app.4.4.165</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2013-10-01</td>
+<td align="left">10.1257/mac.5.4.179</td>
+<td align="left">Democracy and Reforms: Evidence from a New Dataset</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.5.4.179" class="uri">https://doi.org/10.1257/mac.5.4.179</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2012-01-01</td>
+<td align="left">10.1257/mac.4.1.22</td>
+<td align="left">Effects of Fiscal Stimulus in Structural Models</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.4.1.22" class="uri">https://doi.org/10.1257/mac.4.1.22</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2011-10-01</td>
+<td align="left">10.1257/mac.3.4.53</td>
+<td align="left">Exchange Rates and Wages in an Integrated World</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.3.4.53" class="uri">https://doi.org/10.1257/mac.3.4.53</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2014-05-01</td>
+<td align="left">10.1257/aer.104.5.342</td>
+<td align="left">Unilateral Divorce, the Decreasing Gender Gap, and
+Married Women’s Labor Force Participation</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.104.5.342" class="uri">https://doi.org/10.1257/aer.104.5.342</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2006-04-01</td>
+<td align="left">10.1257/000282806777212170</td>
+<td align="left">Modernizing China’s Growth Paradigm</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1257/000282806777212170" class="uri">https://doi.org/10.1257/000282806777212170</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2009-05-01</td>
+<td align="left">10.1257/aer.99.3.883</td>
+<td align="left">Misselling through Agents</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.99.3.883" class="uri">https://doi.org/10.1257/aer.99.3.883</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2010-05-01</td>
+<td align="left">10.1257/aer.100.2.41</td>
+<td align="left">Debt Consolidation and Fiscal Stabilization of Deep
+Recessions</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.100.2.41" class="uri">https://doi.org/10.1257/aer.100.2.41</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2012-04-01</td>
+<td align="left">10.1257/aer.102.2.780</td>
+<td align="left">Competition through Commissions and Kickbacks</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.102.2.780" class="uri">https://doi.org/10.1257/aer.102.2.780</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Review of Economic Studies</td>
+<td align="left">2020-01-01</td>
+<td align="left">10.1093/restud/rdy060</td>
+<td align="left">The New Keynesian Transmission Mechanism: A
+Heterogeneous-Agent Perspective</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1093/restud/rdy060" class="uri">https://doi.org/10.1093/restud/rdy060</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2003-01-01</td>
+<td align="left">10.1111/1468-0297.00093</td>
+<td align="left">Identifying the Common Component of International
+Economic Fluctuations: A new Approach</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00093" class="uri">https://doi.org/10.1111/1468-0297.00093</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2021-08-01</td>
+<td align="left">10.1093/ej/ueab017</td>
+<td align="left">Policies in Hard Times: Assessing the Impact of
+Financial Crises on Structural Reforms</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1093/ej/ueab017" class="uri">https://doi.org/10.1093/ej/ueab017</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2007-10-01</td>
+<td align="left">10.1111/j.1468-0297.2007.02082.x</td>
+<td align="left">Budget Support Versus Project Aid: A Theoretical
+Appraisal</td>
+<td align="left">IMF</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2007.02082.x" class="uri">https://doi.org/10.1111/j.1468-0297.2007.02082.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2010-10-01</td>
+<td align="left">10.1257/app.2.4.1</td>
+<td align="left">Factor Immobility and Regional Impacts of Trade
+Liberalization: Evidence on Poverty from India</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/app.2.4.1" class="uri">https://doi.org/10.1257/app.2.4.1</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2012-10-01</td>
+<td align="left">10.1257/app.4.4.165</td>
+<td align="left">The Power of Political Voice: Women’s Political
+Representation and Crime in India</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/app.4.4.165" class="uri">https://doi.org/10.1257/app.4.4.165</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2013-01-01</td>
+<td align="left">10.1257/app.5.1.104</td>
+<td align="left">Barriers to Household Risk Management: Evidence from
+India</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/app.5.1.104" class="uri">https://doi.org/10.1257/app.5.1.104</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Applied Economics</td>
+<td align="left">2010-10-01</td>
+<td align="left">10.1257/app.2.4.42</td>
+<td align="left">Trade Adjustment and Human Capital Investments:
+Evidence from Indian Tariff Reform</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/app.2.4.42" class="uri">https://doi.org/10.1257/app.2.4.42</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2014-11-01</td>
+<td align="left">10.1257/pol.6.4.343</td>
+<td align="left">The Dynamics of Firm Lobbying</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.6.4.343" class="uri">https://doi.org/10.1257/pol.6.4.343</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2023-05-01</td>
+<td align="left">10.1257/pol.20210166</td>
+<td align="left">Borrowing Costs after Sovereign Debt Relief</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20210166" class="uri">https://doi.org/10.1257/pol.20210166</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2013-02-01</td>
+<td align="left">10.1257/pol.5.1.1</td>
+<td align="left">The Iceberg Theory of Campaign Contributions: Political
+Threats and Interest Group Behavior</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.5.1.1" class="uri">https://doi.org/10.1257/pol.5.1.1</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2019-02-01</td>
+<td align="left">10.1257/pol.20170403</td>
+<td align="left">Effectiveness of Fiscal Incentives for R&amp;D:
+Quasi-experimental Evidence</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20170403" class="uri">https://doi.org/10.1257/pol.20170403</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2023-02-01</td>
+<td align="left">10.1257/pol.20200212</td>
+<td align="left">Exploring Residual Profit Allocation</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20200212" class="uri">https://doi.org/10.1257/pol.20200212</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2020-02-01</td>
+<td align="left">10.1257/pol.20180592</td>
+<td align="left">Where Does Multinational Investment Go with Territorial
+Taxation? Evidence from the United Kingdom</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.20180592" class="uri">https://doi.org/10.1257/pol.20180592</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Economic Policy</td>
+<td align="left">2013-05-01</td>
+<td align="left">10.1257/pol.5.2.77</td>
+<td align="left">Multi-Product Firms and Exchange Rate Fluctuations</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/pol.5.2.77" class="uri">https://doi.org/10.1257/pol.5.2.77</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2020-04-01</td>
+<td align="left">10.1257/mac.20160023</td>
+<td align="left">Did Unconventional Interventions Unfreeze the Credit
+Market?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20160023" class="uri">https://doi.org/10.1257/mac.20160023</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2018-10-01</td>
+<td align="left">10.1257/mac.20150379</td>
+<td align="left">International Transmission with Heterogeneous
+Sectors</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20150379" class="uri">https://doi.org/10.1257/mac.20150379</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2010-04-01</td>
+<td align="left">10.1257/mac.2.2.95</td>
+<td align="left">Putting the Parts Together: Trade, Vertical Linkages,
+and Business Cycle Comovement</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.2.2.95" class="uri">https://doi.org/10.1257/mac.2.2.95</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2020-10-01</td>
+<td align="left">10.1257/mac.20180484</td>
+<td align="left">Quantitative Easing, Collateral Constraints, and
+Financial Spillovers</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20180484" class="uri">https://doi.org/10.1257/mac.20180484</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2020-01-01</td>
+<td align="left">10.1257/mac.20170436</td>
+<td align="left">The Agricultural Wage Gap: Evidence from Brazilian
+Micro-data</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20170436" class="uri">https://doi.org/10.1257/mac.20170436</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2013-10-01</td>
+<td align="left">10.1257/mac.5.4.179</td>
+<td align="left">Democracy and Reforms: Evidence from a New Dataset</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.5.4.179" class="uri">https://doi.org/10.1257/mac.5.4.179</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2022-10-01</td>
+<td align="left">10.1257/mac.20170479</td>
+<td align="left">Fiscal Rules and the Sovereign Default Premium</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20170479" class="uri">https://doi.org/10.1257/mac.20170479</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2022-01-01</td>
+<td align="left">10.1257/mac.20190332</td>
+<td align="left">On the Macroeconomic Consequences of Over-Optimism</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20190332" class="uri">https://doi.org/10.1257/mac.20190332</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2009-06-01</td>
+<td align="left">10.1257/mac.1.2.155</td>
+<td align="left">The International Diversification Puzzle When Goods
+Prices Are Sticky: It’s Really about Exchange-Rate Hedging, Not Equity
+Portfolios</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.1.2.155" class="uri">https://doi.org/10.1257/mac.1.2.155</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2022-01-01</td>
+<td align="left">10.1257/mac.20200084</td>
+<td align="left">Knowledge Diffusion, Trade, and Innovation across
+Countries and Sectors</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20200084" class="uri">https://doi.org/10.1257/mac.20200084</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2018-01-01</td>
+<td align="left">10.1257/mac.20150355</td>
+<td align="left">Firms and the Decline in Earnings Inequality in
+Brazil</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20150355" class="uri">https://doi.org/10.1257/mac.20150355</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2017-07-01</td>
+<td align="left">10.1257/mac.20150293</td>
+<td align="left">Free to Leave? A Welfare Analysis of Divorce
+Regimes</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20150293" class="uri">https://doi.org/10.1257/mac.20150293</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2022-07-01</td>
+<td align="left">10.1257/mac.20180428</td>
+<td align="left">The Term Structure of Growth-at-Risk</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20180428" class="uri">https://doi.org/10.1257/mac.20180428</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2021-01-01</td>
+<td align="left">10.1257/mac.20180227</td>
+<td align="left">The Size Distribution of Firms and Industrial Water
+Pollution: A Quantitative Analysis of China</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20180227" class="uri">https://doi.org/10.1257/mac.20180227</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2020-07-01</td>
+<td align="left">10.1257/mac.20180286</td>
+<td align="left">Sticky Expectations and Consumption Dynamics</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.20180286" class="uri">https://doi.org/10.1257/mac.20180286</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2014-07-01</td>
+<td align="left">10.1257/mac.6.3.102</td>
+<td align="left">Growth and Capital Flows with Risky
+Entrepreneurship</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.6.3.102" class="uri">https://doi.org/10.1257/mac.6.3.102</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2011-10-01</td>
+<td align="left">10.1257/mac.3.4.53</td>
+<td align="left">Exchange Rates and Wages in an Integrated World</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.3.4.53" class="uri">https://doi.org/10.1257/mac.3.4.53</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2012-10-01</td>
+<td align="left">10.1257/mac.4.4.126</td>
+<td align="left">Why Are Target Interest Rate Changes so
+Persistent?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.4.4.126" class="uri">https://doi.org/10.1257/mac.4.4.126</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Journal: Macroeconomics</td>
+<td align="left">2010-01-01</td>
+<td align="left">10.1257/mac.2.1.93</td>
+<td align="left">Why Are Saving Rates of Urban Households in China
+Rising?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mac.2.1.93" class="uri">https://doi.org/10.1257/mac.2.1.93</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Journal: Microeconomics</td>
+<td align="left">2022-02-01</td>
+<td align="left">10.1257/mic.20180044</td>
+<td align="left">Cultural Affinity, Regulation, and Market Structure:
+Evidence from the Canadian Retail Banking Industry</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/mic.20180044" class="uri">https://doi.org/10.1257/mic.20180044</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2006-04-01</td>
+<td align="left">10.1257/000282806777211720</td>
+<td align="left">Asian Growth and African Development</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282806777211720" class="uri">https://doi.org/10.1257/000282806777211720</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2002-04-01</td>
+<td align="left">10.1257/000282802320191679</td>
+<td align="left">The Wage Gap and Public Support for Social
+Security</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282802320191679" class="uri">https://doi.org/10.1257/000282802320191679</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2019-01-01</td>
+<td align="left">10.1257/aer.20171338</td>
+<td align="left">The Cyclicality of Sales, Regular and Effective Prices:
+Business Cycle and Policy Implications: Reply</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20171338" class="uri">https://doi.org/10.1257/aer.20171338</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2000-06-01</td>
+<td align="left">10.1257/aer.90.3.667</td>
+<td align="left">The Role of a Variable Input in the Relationship
+Between Investment and Uncertainty</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.90.3.667" class="uri">https://doi.org/10.1257/aer.90.3.667</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2006-11-01</td>
+<td align="left">10.1257/aer.96.5.1706</td>
+<td align="left">Storable Good Monopoly: The Role of Commitment</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.96.5.1706" class="uri">https://doi.org/10.1257/aer.96.5.1706</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2007-04-01</td>
+<td align="left">10.1257/aer.97.2.322</td>
+<td align="left">Does Aid Affect Governance</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.97.2.322" class="uri">https://doi.org/10.1257/aer.97.2.322</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2003-04-01</td>
+<td align="left">10.1257/000282803321946804</td>
+<td align="left">How Does Globalization Affect the Synchronization of
+Business Cycles?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282803321946804" class="uri">https://doi.org/10.1257/000282803321946804</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2013-05-01</td>
+<td align="left">10.1257/aer.103.3.117</td>
+<td align="left">Growth Forecast Errors and Fiscal Multipliers</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.103.3.117" class="uri">https://doi.org/10.1257/aer.103.3.117</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2012-05-01</td>
+<td align="left">10.1257/aer.102.3.294</td>
+<td align="left">Child Health and Conflict in Côte d’Ivoire</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.102.3.294" class="uri">https://doi.org/10.1257/aer.102.3.294</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2006-04-01</td>
+<td align="left">10.1257/000282806777211621</td>
+<td align="left">Has Government Investment Crowded Out Private
+Investment in India?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282806777211621" class="uri">https://doi.org/10.1257/000282806777211621</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2013-12-01</td>
+<td align="left">10.1257/aer.103.7.3045</td>
+<td align="left">News, Noise, and Fluctuations: An Empirical
+Exploration</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.103.7.3045" class="uri">https://doi.org/10.1257/aer.103.7.3045</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2016-05-01</td>
+<td align="left">10.1257/aer.p20161015</td>
+<td align="left">When Do Capital Inflow Surges End in Tears?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.p20161015" class="uri">https://doi.org/10.1257/aer.p20161015</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2011-06-01</td>
+<td align="left">10.1257/aer.101.4.1436</td>
+<td align="left">The Inflation-Output Trade-Off with Downward Wage
+Rigidities</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.101.4.1436" class="uri">https://doi.org/10.1257/aer.101.4.1436</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2009-02-01</td>
+<td align="left">10.1257/aer.99.1.528</td>
+<td align="left">Democracy and Foreign Education</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.99.1.528" class="uri">https://doi.org/10.1257/aer.99.1.528</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2015-03-01</td>
+<td align="left">10.1257/aer.20110683</td>
+<td align="left">Inequality, Leverage, and Crises</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20110683" class="uri">https://doi.org/10.1257/aer.20110683</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2005-08-01</td>
+<td align="left">10.1257/0002828054825565</td>
+<td align="left">Effective Exchange Rates and the Classical Gold
+Standard Adjustment</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/0002828054825565" class="uri">https://doi.org/10.1257/0002828054825565</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2006-04-01</td>
+<td align="left">10.1257/000282806777212170</td>
+<td align="left">Modernizing China’s Growth Paradigm</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282806777212170" class="uri">https://doi.org/10.1257/000282806777212170</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2012-05-01</td>
+<td align="left">10.1257/aer.102.3.219</td>
+<td align="left">Flight Home, Flight Abroad, and International Credit
+Cycles</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.102.3.219" class="uri">https://doi.org/10.1257/aer.102.3.219</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2009-04-01</td>
+<td align="left">10.1257/aer.99.2.494</td>
+<td align="left">Trade Liberalization and New Imported Inputs</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.99.2.494" class="uri">https://doi.org/10.1257/aer.99.2.494</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2008-04-01</td>
+<td align="left">10.1257/aer.98.2.327</td>
+<td align="left">The Drivers of Financial Globalization</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.98.2.327" class="uri">https://doi.org/10.1257/aer.98.2.327</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2018-09-01</td>
+<td align="left">10.1257/aer.20140443</td>
+<td align="left">International Reserves and Rollover Risk</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20140443" class="uri">https://doi.org/10.1257/aer.20140443</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2005-02-01</td>
+<td align="left">10.1257/0002828053828699</td>
+<td align="left">Financial Reform: What Shakes It? What Shapes It?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/0002828053828699" class="uri">https://doi.org/10.1257/0002828053828699</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2008-05-01</td>
+<td align="left">10.1257/aer.98.3.808</td>
+<td align="left">Income and Democracy</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.98.3.808" class="uri">https://doi.org/10.1257/aer.98.3.808</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2004-04-01</td>
+<td align="left">10.1257/0002828041301740</td>
+<td align="left">Policy Options in a Liquidity Trap</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/0002828041301740" class="uri">https://doi.org/10.1257/0002828041301740</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2004-02-01</td>
+<td align="left">10.1257/000282804322970797</td>
+<td align="left">Pareto-Efficient International Taxation</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282804322970797" class="uri">https://doi.org/10.1257/000282804322970797</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2016-05-01</td>
+<td align="left">10.1257/aer.p20161012</td>
+<td align="left">Capital Flows: Expansionary or Contractionary?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.p20161012" class="uri">https://doi.org/10.1257/aer.p20161012</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2006-04-01</td>
+<td align="left">10.1257/000282806777211676</td>
+<td align="left">Lessons from the Debt-Deflation Theory of Sudden
+Stops</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282806777211676" class="uri">https://doi.org/10.1257/000282806777211676</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2017-05-01</td>
+<td align="left">10.1257/aer.p20171141</td>
+<td align="left">Taxman’s Dilemma: Coercion or Persuasion? Evidence from
+a Randomized Field Experiment in Ethiopia</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.p20171141" class="uri">https://doi.org/10.1257/aer.p20171141</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2002-02-01</td>
+<td align="left">10.1257/000282802760015784</td>
+<td align="left">Does Federalism Lead to Excessively High Taxes?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282802760015784" class="uri">https://doi.org/10.1257/000282802760015784</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2012-05-01</td>
+<td align="left">10.1257/aer.102.3.225</td>
+<td align="left">From Financial Crisis to Great Recession: The Role of
+Globalized Banks</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.102.3.225" class="uri">https://doi.org/10.1257/aer.102.3.225</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2003-04-01</td>
+<td align="left">10.1257/000282803321946822</td>
+<td align="left">Sovereign Debt Restructuring: Messy or Messier?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282803321946822" class="uri">https://doi.org/10.1257/000282803321946822</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2015-03-01</td>
+<td align="left">10.1257/aer.20121546</td>
+<td align="left">The Cyclicality of Sales, Regular and Effective Prices:
+Business Cycle and Policy Implications</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20121546" class="uri">https://doi.org/10.1257/aer.20121546</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2000-06-01</td>
+<td align="left">10.1257/aer.90.3.649</td>
+<td align="left">Political Influence and the Dynamic Consistency of
+Policy</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.90.3.649" class="uri">https://doi.org/10.1257/aer.90.3.649</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2000-05-01</td>
+<td align="left">10.1257/aer.90.2.243</td>
+<td align="left">Restricting the Trash Trade</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.90.2.243" class="uri">https://doi.org/10.1257/aer.90.2.243</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2006-02-01</td>
+<td align="left">10.1257/000282806776157759</td>
+<td align="left">Money in a Theory of Banking</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282806776157759" class="uri">https://doi.org/10.1257/000282806776157759</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2007-02-01</td>
+<td align="left">10.1257/aer.97.1.474</td>
+<td align="left">Credible Commitment to Optimal Escape from a Liquidity
+Trap: The Role of the Balance Sheet of an Independent Central Bank</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.97.1.474" class="uri">https://doi.org/10.1257/aer.97.1.474</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2011-05-01</td>
+<td align="left">10.1257/aer.101.3.308</td>
+<td align="left">Vertical Linkages and the Collapse of Global Trade</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.101.3.308" class="uri">https://doi.org/10.1257/aer.101.3.308</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2003-04-01</td>
+<td align="left">10.1257/000282803321947173</td>
+<td align="left">Monetary Policy Under Imperfect Capital Markets in a
+Small Open Economy</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282803321947173" class="uri">https://doi.org/10.1257/000282803321947173</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2002-04-01</td>
+<td align="left">10.1257/000282802320191697</td>
+<td align="left">Asset-Market Effects of the Baby Boom and
+Social-Security Reform</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282802320191697" class="uri">https://doi.org/10.1257/000282802320191697</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2003-04-01</td>
+<td align="left">10.1257/000282803321946840</td>
+<td align="left">Is Aggregation a Problem for Sovereign Debt
+Restructuring?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/000282803321946840" class="uri">https://doi.org/10.1257/000282803321946840</a></td>
+</tr>
+<tr class="odd">
+<td align="left">American Economic Review</td>
+<td align="left">2009-02-01</td>
+<td align="left">10.1257/aer.99.1.472</td>
+<td align="left">Diversity in the Workplace</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.99.1.472" class="uri">https://doi.org/10.1257/aer.99.1.472</a></td>
+</tr>
+<tr class="even">
+<td align="left">American Economic Review</td>
+<td align="left">2019-06-01</td>
+<td align="left">10.1257/aer.20140193</td>
+<td align="left">A Macroeconomic Model of Price Swings in the Housing
+Market</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1257/aer.20140193" class="uri">https://doi.org/10.1257/aer.20140193</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Quarterly Journal of Economics</td>
+<td align="left">2019-02-01</td>
+<td align="left">10.1093/qje/qjy026</td>
+<td align="left">Forward and Spot Exchange Rates in a Multi-Currency
+World*</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1093/qje/qjy026" class="uri">https://doi.org/10.1093/qje/qjy026</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Quarterly Journal of Economics</td>
+<td align="left">2017-11-01</td>
+<td align="left">10.1093/qje/qjx020</td>
+<td align="left">The Benefits of Forced Experimentation: Striking
+Evidence from the London Underground Network*</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1093/qje/qjx020" class="uri">https://doi.org/10.1093/qje/qjx020</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Review of Economic Studies</td>
+<td align="left">2022-11-07</td>
+<td align="left">10.1093/restud/rdac008</td>
+<td align="left">Subjective Models of the Macroeconomy: Evidence From
+Experts and Representative Samples</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1093/restud/rdac008" class="uri">https://doi.org/10.1093/restud/rdac008</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Review of Economic Studies</td>
+<td align="left">2019-10-01</td>
+<td align="left">10.1093/restud/rdy062</td>
+<td align="left">Growth Through Inter-sectoral Knowledge Linkages</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1093/restud/rdy062" class="uri">https://doi.org/10.1093/restud/rdy062</a></td>
+</tr>
+<tr class="odd">
+<td align="left">Review of Economic Studies</td>
+<td align="left">NA</td>
+<td align="left">10.1093/restud/rdad052</td>
+<td align="left">Bilateral Trade Imbalances</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1093/restud/rdad052" class="uri">https://doi.org/10.1093/restud/rdad052</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Review of Economic Studies</td>
+<td align="left">2023-05-05</td>
+<td align="left">10.1093/restud/rdac053</td>
+<td align="left">Sentimental Business Cycles</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1093/restud/rdac053" class="uri">https://doi.org/10.1093/restud/rdac053</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Review of Economic Studies</td>
+<td align="left">2014-04-01</td>
+<td align="left">10.1093/restud/rdt040</td>
+<td align="left">Retracted: Growing up in a Recession</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1093/restud/rdt040" class="uri">https://doi.org/10.1093/restud/rdt040</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2012-03-01</td>
+<td align="left">10.1111/j.1468-0297.2011.02460.x</td>
+<td align="left">Growth Empirics without Parameters</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2011.02460.x" class="uri">https://doi.org/10.1111/j.1468-0297.2011.02460.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2014-05</td>
+<td align="left">10.1111/ecoj.12136</td>
+<td align="left">Divorce Risk, Wages and Working Wives: A Quantitative
+Life-Cycle Analysis of Female Labour Force Participation</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12136" class="uri">https://doi.org/10.1111/ecoj.12136</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2019-01-01</td>
+<td align="left">10.1111/ecoj.12600</td>
+<td align="left">Transmission of Quantitative Easing: The Role of
+Central Bank Reserves</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12600" class="uri">https://doi.org/10.1111/ecoj.12600</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2022-06-17</td>
+<td align="left">10.1093/ej/ueac010</td>
+<td align="left">Financial Frictions and Firm Informality: A General
+Equilibrium Perspective</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1093/ej/ueac010" class="uri">https://doi.org/10.1093/ej/ueac010</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2023-01-13</td>
+<td align="left">10.1093/ej/ueac067</td>
+<td align="left">Investor Sentiment, Sovereign Debt Mispricing, and
+Economic Outcomes</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1093/ej/ueac067" class="uri">https://doi.org/10.1093/ej/ueac067</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2019-01-01</td>
+<td align="left">10.1111/ecoj.12579</td>
+<td align="left">Friedman Redux: External Adjustment and Exchange Rate
+Flexibility</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12579" class="uri">https://doi.org/10.1111/ecoj.12579</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2013-02-01</td>
+<td align="left">10.1111/ecoj.12013</td>
+<td align="left">Sovereign Risk, Fiscal Policy, and Macroeconomic
+Stability</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12013" class="uri">https://doi.org/10.1111/ecoj.12013</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2001-07-01</td>
+<td align="left">10.1111/1468-0297.00651</td>
+<td align="left">Bargaining Over EMU Vs. EMS: Why Might the ECB be the
+Twin Sister of the Bundesbank?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00651" class="uri">https://doi.org/10.1111/1468-0297.00651</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">NA</td>
+<td align="left">10.1093/ej/uead023</td>
+<td align="left">Tax Revenues in Low-Income Countries</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1093/ej/uead023" class="uri">https://doi.org/10.1093/ej/uead023</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2014-12</td>
+<td align="left">10.1111/ecoj.12076</td>
+<td align="left">Local Government Spending Multipliers and Financial
+Distress: Evidence from Japanese Prefectures</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12076" class="uri">https://doi.org/10.1111/ecoj.12076</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2017-09-01</td>
+<td align="left">10.1111/ecoj.12360</td>
+<td align="left">Actively Learning by Pricing: A Model of an
+Experimenting Seller</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12360" class="uri">https://doi.org/10.1111/ecoj.12360</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2008-03-01</td>
+<td align="left">10.1111/j.1468-0297.2007.02129.x</td>
+<td align="left">Smooth it Like the ‘Joneses’? Estimating Peer‐Group
+Effects in Intertemporal Consumption Choice</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2007.02129.x" class="uri">https://doi.org/10.1111/j.1468-0297.2007.02129.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2001-06-01</td>
+<td align="left">10.1111/1468-0297.00629</td>
+<td align="left">Economic Developments in the West Bank and Gaza Since
+Oslo</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00629" class="uri">https://doi.org/10.1111/1468-0297.00629</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2012-06-01</td>
+<td align="left">10.1111/j.1468-0297.2012.02508.x</td>
+<td align="left">Commodity Windfalls, Democracy and External Debt</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2012.02508.x" class="uri">https://doi.org/10.1111/j.1468-0297.2012.02508.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2006-07-01</td>
+<td align="left">10.1111/j.1468-0297.2006.01114.x</td>
+<td align="left">Catalysing Private Capital Flows: Do IMF Programmes
+Work as Commitment Devices?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2006.01114.x" class="uri">https://doi.org/10.1111/j.1468-0297.2006.01114.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2018-11-01</td>
+<td align="left">10.1111/ecoj.12538</td>
+<td align="left">Inflation Targeting, Fiscal Rules and the Policy Mix:
+Cross‐effects and Interactions</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12538" class="uri">https://doi.org/10.1111/ecoj.12538</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2004-10-01</td>
+<td align="left">10.1111/j.1468-0297.2004.00249.x</td>
+<td align="left">Does Insider Trading Raise Market Volatility?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2004.00249.x" class="uri">https://doi.org/10.1111/j.1468-0297.2004.00249.x</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2004-04-01</td>
+<td align="left">10.1111/j.1468-0297.2004.00208.x</td>
+<td align="left">Do Collective Action Clauses Raise Borrowing
+Costs?</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/j.1468-0297.2004.00208.x" class="uri">https://doi.org/10.1111/j.1468-0297.2004.00208.x</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2000-01-01</td>
+<td align="left">10.1111/1468-0297.00501</td>
+<td align="left">From Suez to Tequila: The IMF As Crisis Manager</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00501" class="uri">https://doi.org/10.1111/1468-0297.00501</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2000-01-01</td>
+<td align="left">10.1111/1468-0297.00490</td>
+<td align="left">Tax Reform and Progressivity</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/1468-0297.00490" class="uri">https://doi.org/10.1111/1468-0297.00490</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2017-06-01</td>
+<td align="left">10.1111/ecoj.12353</td>
+<td align="left">What Fuels the Boom Drives the Bust: Regulation and The
+Mortgage Crisis</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12353" class="uri">https://doi.org/10.1111/ecoj.12353</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2018-06-01</td>
+<td align="left">10.1111/ecoj.12473</td>
+<td align="left">The Ponds Dilemma</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12473" class="uri">https://doi.org/10.1111/ecoj.12473</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2015-09</td>
+<td align="left">10.1111/ecoj.12169</td>
+<td align="left">Demand for Slant: How Abstention Shapes Voters’ Choice
+of News Media</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12169" class="uri">https://doi.org/10.1111/ecoj.12169</a></td>
+</tr>
+<tr class="odd">
+<td align="left">The Economic Journal</td>
+<td align="left">2018-03-01</td>
+<td align="left">10.1111/ecoj.12452</td>
+<td align="left">Monetary and Macroprudential Policies in a Leveraged
+Economy</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12452" class="uri">https://doi.org/10.1111/ecoj.12452</a></td>
+</tr>
+<tr class="even">
+<td align="left">The Economic Journal</td>
+<td align="left">2013-02-01</td>
+<td align="left">10.1111/ecoj.12010</td>
+<td align="left">Fiscal Fatigue, Fiscal Space and Debt Sustainability in
+Advanced Economies</td>
+<td align="left">International Monetary Fund</td>
+<td align="left"><a href="https://doi.org/10.1111/ecoj.12010" class="uri">https://doi.org/10.1111/ecoj.12010</a></td>
+</tr>
+<tr class="odd">
+<td align="left">Journal of Political Economy</td>
+<td align="left">2008-04</td>
+<td align="left">10.1086/588200</td>
+<td align="left">Consumption Strikes Back? Measuring Long‐Run Risk</td>
+<td align="left">NA</td>
+<td align="left"><a href="https://doi.org/10.1086/588200" class="uri">https://doi.org/10.1086/588200</a></td>
+</tr>
+<tr class="even">
+<td align="left">Journal of Political Economy</td>
+<td align="left">2001-10</td>
+<td align="left">10.1086/322831</td>
+<td align="left">Globalization and the Rate of Technological Progress:
+What Track and Field Records Show</td>
+<td align="left">NA</td>
+<td align="left"><a href="https://doi.org/10.1086/322831" class="uri">https://doi.org/10.1086/322831</a></td>
+</tr>
+<tr class="odd">
+<td align="left">Journal of Political Economy</td>
+<td align="left">2016-10</td>
+<td align="left">10.1086/688081</td>
+<td align="left">Debt Dilution and Sovereign Default Risk</td>
+<td align="left">NA</td>
+<td align="left"><a href="https://doi.org/10.1086/688081" class="uri">https://doi.org/10.1086/688081</a></td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="system-info" class="section level2">
 <h2>System info</h2>
 <pre class="r"><code>Sys.info()</code></pre>
-<pre><code>##                                       sysname 
-##                                       &quot;Linux&quot; 
-##                                       release 
-##                           &quot;5.15.0-1038-azure&quot; 
-##                                       version 
-## &quot;#45-Ubuntu SMP Mon Apr 24 15:40:42 UTC 2023&quot; 
-##                                      nodename 
-##                                &quot;abb8ed5f12cd&quot; 
-##                                       machine 
-##                                      &quot;x86_64&quot; 
-##                                         login 
-##                                     &quot;unknown&quot; 
-##                                          user 
-##                                     &quot;rstudio&quot; 
-##                                effective_user 
-##                                     &quot;rstudio&quot;</code></pre>
+<pre><code>##                                                        sysname 
+##                                                        &quot;Linux&quot; 
+##                                                        release 
+##                                 &quot;5.14.21-150400.24.63-default&quot; 
+##                                                        version 
+## &quot;#1 SMP PREEMPT_DYNAMIC Tue May 2 15:49:04 UTC 2023 (fd0cc4f)&quot; 
+##                                                       nodename 
+##                                                 &quot;b9e5e4b91d45&quot; 
+##                                                        machine 
+##                                                       &quot;x86_64&quot; 
+##                                                          login 
+##                                                      &quot;unknown&quot; 
+##                                                           user 
+##                                                      &quot;rstudio&quot; 
+##                                                 effective_user 
+##                                                      &quot;rstudio&quot;</code></pre>
 </div>
 
 
