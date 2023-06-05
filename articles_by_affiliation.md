@@ -1,7 +1,7 @@
 ---
 title: "Obtaining lists of articles for contributors from a specific Org"
 author: "Lars Vilhuber"
-date: "2023-06-04"
+date: "2023-06-05"
 output: 
   html_document: 
     keep_md: yes
@@ -135,7 +135,7 @@ if ( file.exists(issns.file) ) {
 new.df <- readRDS(file= new.file.Rds)
 ```
 
-We read **13096** article records for **13** journals, with **28887** article-author observations:
+We read **13096** article records for **13** journals, with **28870** article-author observations:
 
 
 |container.title                              | records|
@@ -144,7 +144,7 @@ We read **13096** article records for **13** journals, with **28887** article-au
 |American Economic Journal: Economic Policy   |    1526|
 |American Economic Journal: Macroeconomics    |    1163|
 |American Economic Journal: Microeconomics    |    1311|
-|American Economic Review                     |    9856|
+|American Economic Review                     |    9839|
 |Journal of Political Economy                 |    2740|
 |Quarterly Journal of Economics               |     431|
 |Review of Economic Studies                   |     920|
@@ -188,13 +188,20 @@ saveRDS(full.file,file=full.file.Rds)
 write.csv(full.file,file=full.file.csv,row.names = FALSE)
 ```
 
-Now pull out the selected affiliation ("World Bank"):
+Now pull out the selected affiliation ("World Bank, IMF, International Monetary Fund"):
 
 
 ```r
 full.file <- readRDS(full.file.Rds)
 full.file %>% filter(str_detect(affiliations,affiliation.target)) -> target
+```
 
+```
+## Warning in stri_detect_regex(string, pattern, negate = negate, opts_regex =
+## opts(pattern)): longer object length is not a multiple of shorter object length
+```
+
+```r
 # Save the target file
 
 saveRDS(target,target.file.Rds)
@@ -227,7 +234,7 @@ Sys.info()
 ##                                       version 
 ## "#45-Ubuntu SMP Mon Apr 24 15:40:42 UTC 2023" 
 ##                                      nodename 
-##                                "a75db66677d9" 
+##                                "d8ca83841f2d" 
 ##                                       machine 
 ##                                      "x86_64" 
 ##                                         login 

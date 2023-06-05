@@ -133,10 +133,10 @@ label: sysinfo
 
 output file: articles_by_affiliation.knit.md
 
-/usr/lib/rstudio-server/bin/quarto/bin/pandoc +RTS -K512m -RTS articles_by_affiliation.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output articles_by_affiliation.html --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmarkdown/lua/latex-div.lua --self-contained --variable bs3=TRUE --standalone --section-divs --template /usr/local/lib/R/site-library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=bootstrap --mathjax --variable 'mathjax-url=https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-in-header /tmp/RtmpNIY3EC/rmarkdown-str4d329f0d969.html 
+/usr/lib/rstudio-server/bin/quarto/bin/pandoc +RTS -K512m -RTS articles_by_affiliation.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output articles_by_affiliation.html --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmarkdown/lua/latex-div.lua --self-contained --variable bs3=TRUE --standalone --section-divs --template /usr/local/lib/R/site-library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --variable theme=bootstrap --mathjax --variable 'mathjax-url=https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-in-header /tmp/RtmpkOqGJb/rmarkdown-str18d571bfe96.html 
 
 Output created: articles_by_affiliation.html
 > 
 > proc.time()
    user  system elapsed 
- 70.549   1.189 455.893 
+ 64.239   1.220 801.840 

@@ -11,7 +11,7 @@
 
 <meta name="author" content="Lars Vilhuber" />
 
-<meta name="date" content="2023-06-04" />
+<meta name="date" content="2023-06-05" />
 
 <title>Obtaining lists of articles for contributors from a specific Org</title>
 
@@ -366,7 +366,7 @@ pre code {
 <h1 class="title toc-ignore">Obtaining lists of articles for
 contributors from a specific Org</h1>
 <h4 class="author">Lars Vilhuber</h4>
-<h4 class="date">2023-06-04</h4>
+<h4 class="date">2023-06-05</h4>
 
 </div>
 
@@ -483,7 +483,7 @@ if ( file.exists(issns.file) ) {
 # clean read-back
 new.df &lt;- readRDS(file= new.file.Rds)</code></pre>
 <p>We read <strong>13096</strong> article records for
-<strong>13</strong> journals, with <strong>28887</strong> article-author
+<strong>13</strong> journals, with <strong>28870</strong> article-author
 observations:</p>
 <table>
 <thead>
@@ -511,7 +511,7 @@ observations:</p>
 </tr>
 <tr class="odd">
 <td align="left">American Economic Review</td>
-<td align="right">9856</td>
+<td align="right">9839</td>
 </tr>
 <tr class="even">
 <td align="left">Journal of Political Economy</td>
@@ -573,11 +573,13 @@ if (file.exists(full.file.Rds)) {
 
 saveRDS(full.file,file=full.file.Rds)
 write.csv(full.file,file=full.file.csv,row.names = FALSE)</code></pre>
-<p>Now pull out the selected affiliation (“World Bank”):</p>
+<p>Now pull out the selected affiliation (“World Bank, IMF,
+International Monetary Fund”):</p>
 <pre class="r"><code>full.file &lt;- readRDS(full.file.Rds)
-full.file %&gt;% filter(str_detect(affiliations,affiliation.target)) -&gt; target
-
-# Save the target file
+full.file %&gt;% filter(str_detect(affiliations,affiliation.target)) -&gt; target</code></pre>
+<pre><code>## Warning in stri_detect_regex(string, pattern, negate = negate, opts_regex =
+## opts(pattern)): longer object length is not a multiple of shorter object length</code></pre>
+<pre class="r"><code># Save the target file
 
 saveRDS(target,target.file.Rds)
 write.csv(target,target.file.csv,row.names = FALSE)
@@ -600,7 +602,7 @@ write.csv(target.articles,target.articles.csv,row.names = FALSE)</code></pre>
 ##                                       version 
 ## &quot;#45-Ubuntu SMP Mon Apr 24 15:40:42 UTC 2023&quot; 
 ##                                      nodename 
-##                                &quot;a75db66677d9&quot; 
+##                                &quot;d8ca83841f2d&quot; 
 ##                                       machine 
 ##                                      &quot;x86_64&quot; 
 ##                                         login 
