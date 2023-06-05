@@ -215,14 +215,14 @@ write.csv(target.articles,target.articles.csv,row.names = FALSE)
 
 We found `r nrow(target.articles)`:
 
-```{r group_articles,include=FALSE}
+```{r group_articles,echo=FALSE}
 knitr::kable(target.articles %>% group_by(detected_target) %>% summarize(Count=n())) 
 ```
 (Table may contain some double-counting if the same article has authors from multiple targeted institutions)
 
 Here are the articles we found:
 
-```{r show_articles,include=FALSE}
+```{r show_articles,echo=FALSE}
 knitr::kable(target.articles)
 ```
 
