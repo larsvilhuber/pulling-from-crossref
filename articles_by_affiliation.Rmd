@@ -186,21 +186,39 @@ Now pull out the selected affiliation ("`r affiliation.target`"):
 
 ```{r target}
 full.file <- readRDS(full.file.Rds)
-full.file %>% filter(str_detect(affiliations,affiliation.target)) -> target
+# Iterate over targets
+if ( exists("target.df") ) { rm(target.df) }
+for ( target in affiliation.target ) {
+  full.file %>% filter(str_detect(affiliations,target)) %>%
+    mutate(detected_target = target) -> tmp.df
+  if ( exists("target.df") ) {
+    target.df <- bind_rows(target.df,tmp.df)
+  } else {
+    target.df <- tmp.df
+  }
+  rm(tmp.df)
+}
 
 # Save the target file
 
-saveRDS(target,target.file.Rds)
-write.csv(target,target.file.csv,row.names = FALSE)
+saveRDS(target.df,target.file.Rds)
+write.csv(target.df,target.file.csv,row.names = FALSE)
 
 # subset to unique articles
 
-target %>% select(container.title,published.print,doi,title) %>%
+target.df %>% select(container.title,published.print,doi,title,detected_target) %>%
   distinct() %>%
   mutate(url=paste0("https://doi.org/",doi)) -> target.articles
 write.csv(target.articles,target.articles.csv,row.names = FALSE)
 
 ```
+
+We found `r nrow(target.articles)`:
+
+```{r group_articles,include=FALSE}
+knitr::kable(target.articles %>% group_by(detected_target) %>% summarize(Count=n())) 
+```
+(Table may contain some double-counting if the same article has authors from multiple targeted institutions)
 
 Here are the articles we found:
 

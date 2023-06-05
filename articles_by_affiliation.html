@@ -483,7 +483,7 @@ if ( file.exists(issns.file) ) {
 # clean read-back
 new.df &lt;- readRDS(file= new.file.Rds)</code></pre>
 <p>We read <strong>13096</strong> article records for
-<strong>13</strong> journals, with <strong>28870</strong> article-author
+<strong>13</strong> journals, with <strong>28878</strong> article-author
 observations:</p>
 <table>
 <thead>
@@ -511,7 +511,7 @@ observations:</p>
 </tr>
 <tr class="odd">
 <td align="left">American Economic Review</td>
-<td align="right">9839</td>
+<td align="right">9847</td>
 </tr>
 <tr class="even">
 <td align="left">Journal of Political Economy</td>
@@ -576,20 +576,33 @@ write.csv(full.file,file=full.file.csv,row.names = FALSE)</code></pre>
 <p>Now pull out the selected affiliation (“World Bank, IMF,
 International Monetary Fund”):</p>
 <pre class="r"><code>full.file &lt;- readRDS(full.file.Rds)
-full.file %&gt;% filter(str_detect(affiliations,affiliation.target)) -&gt; target</code></pre>
-<pre><code>## Warning in stri_detect_regex(string, pattern, negate = negate, opts_regex =
-## opts(pattern)): longer object length is not a multiple of shorter object length</code></pre>
-<pre class="r"><code># Save the target file
+# Iterate over targets
+if ( exists(&quot;target.df&quot;) ) { rm(target.df) }
+for ( target in affiliation.target ) {
+  full.file %&gt;% filter(str_detect(affiliations,target)) %&gt;%
+    mutate(detected_target = target) -&gt; tmp.df
+  if ( exists(&quot;target.df&quot;) ) {
+    target.df &lt;- bind_rows(target.df,tmp.df)
+  } else {
+    target.df &lt;- tmp.df
+  }
+  rm(tmp.df)
+}
 
-saveRDS(target,target.file.Rds)
-write.csv(target,target.file.csv,row.names = FALSE)
+# Save the target file
+
+saveRDS(target.df,target.file.Rds)
+write.csv(target.df,target.file.csv,row.names = FALSE)
 
 # subset to unique articles
 
-target %&gt;% select(container.title,published.print,doi,title) %&gt;%
+target.df %&gt;% select(container.title,published.print,doi,title,detected_target) %&gt;%
   distinct() %&gt;%
   mutate(url=paste0(&quot;https://doi.org/&quot;,doi)) -&gt; target.articles
 write.csv(target.articles,target.articles.csv,row.names = FALSE)</code></pre>
+<p>We found 304:</p>
+<p>(Table may contain some double-counting if the same article has
+authors from multiple targeted institutions)</p>
 <p>Here are the articles we found:</p>
 </div>
 <div id="system-info" class="section level2">
@@ -602,7 +615,7 @@ write.csv(target.articles,target.articles.csv,row.names = FALSE)</code></pre>
 ##                                       version 
 ## &quot;#45-Ubuntu SMP Mon Apr 24 15:40:42 UTC 2023&quot; 
 ##                                      nodename 
-##                                &quot;d8ca83841f2d&quot; 
+##                                &quot;abb8ed5f12cd&quot; 
 ##                                       machine 
 ##                                      &quot;x86_64&quot; 
 ##                                         login 
