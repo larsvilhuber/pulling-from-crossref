@@ -8,15 +8,17 @@ basepath <- rprojroot::find_root(rprojroot::has_file("pathconfig.R"))
 setwd(basepath)
 
 # Main directories
-interwrk <- file.path("data","interwrk")
-dataloc <- file.path("data","outputs")
+datadir  <- file.path(basepath, "data")
+dataloc <- file.path(datadir,"outputs")
+acquired <- file.path(datadir,"acquired")
+interwrk <- file.path(datadir,"interwrk")
+
+for ( dir in list(datadir,acquired,interwrk,dataloc)){
+  if (file.exists(dir)){
+  } else {
+    dir.create(file.path(dir))
+  }
+}
 
 
 programs <- file.path(basepath)
-
-for ( dir in list(interwrk,dataloc)){
-	if (file.exists(dir)){
-	} else {
-	dir.create(file.path(dir),recursive = TRUE)
-	}
-}
